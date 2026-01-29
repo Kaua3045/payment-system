@@ -7,7 +7,7 @@ plugins {
     id 'org.flywaydb.flyway' version '10.13.0'
 }
 
-group = 'com.kaua.template.infrastructure'
+group = 'com.payment.system.infrastructure'
 
 bootJar {
     archiveFileName = 'application.jar'
@@ -17,7 +17,7 @@ bootJar {
 springBoot {
     buildInfo {
         properties {
-            name = 'java-template'
+            name = 'payment-system'
         }
     }
 }
@@ -40,6 +40,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0"
+
     implementation "io.opentelemetry:opentelemetry-api:$opentelemetryVersion"
     implementation "io.opentelemetry:opentelemetry-sdk:$opentelemetryVersion"
     implementation "io.opentelemetry:opentelemetry-sdk-testing:$opentelemetryVersion"
@@ -48,25 +50,26 @@ dependencies {
     implementation "io.micrometer:micrometer-registry-prometheus"
     implementation "io.micrometer:micrometer-registry-otlp"
 
-    implementation 'ch.qos.logback:logback-core:1.5.15'
-    implementation 'ch.qos.logback:logback-classic:1.5.15'
+    implementation 'ch.qos.logback:logback-core:1.5.25'
+    implementation 'ch.qos.logback:logback-classic:1.5.25'
 
     implementation 'com.fasterxml.jackson.module:jackson-module-blackbird'
 
     implementation 'org.flywaydb:flyway-core'
-//    implementation 'org.postgresql:postgresql' change to match your database driver
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'org.postgresql:postgresql'
 
     implementation 'org.owasp.encoder:encoder:1.2.3'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testRuntimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.h2database:h2'
 
     testImplementation(project(path: ':domain', configuration: 'testClasses'))
 
-    testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers:2.0.2'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.2'
 }
 
 flyway { // Flyway configuration change this to match your database
@@ -80,8 +83,8 @@ jacocoTestReport {
         classDirectories.setFrom(
                 files(classDirectories.files.collect {
                     fileTree(dir: it, exclude: [
-                            'com/kaua/template/infrastructure/configurations/*',
-                            'com/kaua/template/infrastructure/Main.class'
+                            'com/payment/system/infrastructure/configurations/*',
+                            'com/payment/system/infrastructure/Main.class'
                     ])
                 })
         )
@@ -102,8 +105,8 @@ testCodeCoverageReport {
         classDirectories.setFrom(
                 files(classDirectories.files.collect {
                     fileTree(dir: it, exclude: [
-                            'com/kaua/template/infrastructure/configurations/*',
-                            'com/kaua/template/infrastructure/Main.class'
+                            'com/payment/system/infrastructure/configurations/*',
+                            'com/payment/system/infrastructure/Main.class'
                     ])
                 })
         )
@@ -115,8 +118,8 @@ jacocoTestCoverageVerification {
         classDirectories.setFrom(
                 files(classDirectories.files.collect {
                     fileTree(dir: it, exclude: [
-                            'com/kaua/template/infrastructure/configurations/*',
-                            'com/kaua/template/infrastructure/Main.class'
+                            'com/payment/system/infrastructure/configurations/*',
+                            'com/payment/system/infrastructure/Main.class'
                     ])
                 })
         )

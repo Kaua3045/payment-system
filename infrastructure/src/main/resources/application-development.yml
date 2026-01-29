@@ -1,9 +1,9 @@
 application:
   otel:
     memory-exporter: true
-  name: events-platform
+  name: payment-system
   environment: ${DEPLOYMENT_ENVIRONMENT_NAME:dev}
-  instance: events-platform-01
+  instance: payment-system-01
 
 redis:
   host: localhost
@@ -17,7 +17,7 @@ server:
 
 spring:
   datasource: # change this configurations to your database
-    url: jdbc:postgresql://localhost:5434/template
+    url: jdbc:postgresql://localhost:5434/payment-system
     username: postgres
     password: 123456
   jpa:

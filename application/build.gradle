@@ -3,7 +3,7 @@ plugins {
     id 'java-conventions'
 }
 
-group = 'com.kaua.template.application'
+group = 'com.payment.system.application'
 
 dependencies {
     implementation(project(':domain'))

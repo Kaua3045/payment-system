@@ -1,4 +1,4 @@
-# Plataform de Eventos
+# Payment System
 
 ## Ferramentas utilizadas
 ![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=java&logoColor=white)
@@ -9,7 +9,7 @@
 
 ## Sobre
 
-Uma plataforma muito parecida com a Sympla. Criar e gerenciar eventos e tickets.
+Um sistema estilo banco, para processamento de pagamentos, com criação de contas, depósitos, saques e transferências entre contas.
 
 - Porquê decidiu fazer esse projeto?
   - Decidi fazer esse projeto para aprender mais sobre clean architecture, DDD e SOLID. Além de aprender mais sobre o Spring e o Java. Deploys com k8s, docker e argoCD.
@@ -53,8 +53,8 @@ Uma plataforma muito parecida com a Sympla. Criar e gerenciar eventos e tickets.
 
 1. Baixe o projeto e instale as dependências:
 ```bash
-git clone https://github.com/Kaua3045/java-template-modules.git
-cd java-template-modules
+git clone https://github.com/Kaua3045/payment-system.git
+cd payment-system
 ./gradlew build
 ```
 

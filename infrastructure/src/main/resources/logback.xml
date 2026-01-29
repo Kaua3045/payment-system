@@ -6,7 +6,7 @@
     <appender name="stdout_plain" class="ConsoleAppender">
         <encoder
                 class="ch.qos.logback.core.encoder.LayoutWrappingEncoder"> <!-- https://www.codelord.net/2010/08/27/logging-with-a-context-users-in-logback-and-spring-security/ -->
-            <layout class="com.kaua.template.infrastructure.configurations.logback.PatternLayoutWithAttributes">
+            <layout class="com.payment.system.infrastructure.configurations.logback.PatternLayoutWithAttributes">
                 <pattern> <!-- https://github.com/onready/demo-spring-security-logging-pattern -->
                     %d{HH:mm:ss.SSSZZ} [%thread] [%X{traceId}] [%X{spanId}] [%user] %-5level %logger{36} - %msg%n
                 </pattern>
