@@ -1,0 +1,128 @@
+plugins {
+    id 'java-library'
+    id 'java-conventions'
+    id 'jacoco-report-aggregation'
+    id 'org.springframework.boot' version '3.4.2'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.flywaydb.flyway' version '10.13.0'
+}
+
+group = 'com.kaua.template.infrastructure'
+
+bootJar {
+    archiveFileName = 'application.jar'
+    destinationDirectory.set(file("${rootProject.layout.buildDirectory.get()}/libs"))
+}
+
+springBoot {
+    buildInfo {
+        properties {
+            name = 'java-template'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+var opentelemetryVersion = "1.52.0"
+
+dependencies {
+    implementation(project(":application"))
+    implementation(project(":domain"))
+
+    implementation('org.springframework.boot:spring-boot-starter-web') {
+//        exclude module: 'spring-boot-starter-tomcat'
+    }
+//    implementation 'org.springframework.boot:spring-boot-starter-undertow'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+
+    implementation "io.opentelemetry:opentelemetry-api:$opentelemetryVersion"
+    implementation "io.opentelemetry:opentelemetry-sdk:$opentelemetryVersion"
+    implementation "io.opentelemetry:opentelemetry-sdk-testing:$opentelemetryVersion"
+
+    implementation "io.micrometer:micrometer-core"
+    implementation "io.micrometer:micrometer-registry-prometheus"
+    implementation "io.micrometer:micrometer-registry-otlp"
+
+    implementation 'ch.qos.logback:logback-core:1.5.15'
+    implementation 'ch.qos.logback:logback-classic:1.5.15'
+
+    implementation 'com.fasterxml.jackson.module:jackson-module-blackbird'
+
+    implementation 'org.flywaydb:flyway-core'
+//    implementation 'org.postgresql:postgresql' change to match your database driver
+
+    implementation 'org.owasp.encoder:encoder:1.2.3'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testRuntimeOnly 'com.h2database:h2'
+
+    testImplementation(project(path: ':domain', configuration: 'testClasses'))
+
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+}
+
+flyway { // Flyway configuration change this to match your database
+    url = 'jdbc:postgresql://' + System.getenv('DATABASE_POSTGRESQL_URL') + '/template' ?: 'jdbc:postgresql://localhost:5432/template'
+    user = System.getenv('DATABASE_POSTGRESQL_USERNAME') ?: 'postgres'
+    password = System.getenv('DATABASE_POSTGRESQL_PASSWORD') ?: '123456'
+}
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, exclude: [
+                            'com/kaua/template/infrastructure/configurations/*',
+                            'com/kaua/template/infrastructure/Main.class'
+                    ])
+                })
+        )
+    }
+}
+
+testCodeCoverageReport {
+    reports {
+        csv.required = true
+        csv.outputLocation = file("$rootDir/build/reports/jacoco/test/jacocoTestReport.csv")
+        html.required = true
+        html.outputLocation = file("$rootDir/build/reports/jacoco/test/jacocoTestReport.html")
+        xml.required = true
+        xml.outputLocation = file("$rootDir/build/reports/jacoco/test/jacocoTestReport.xml")
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, exclude: [
+                            'com/kaua/template/infrastructure/configurations/*',
+                            'com/kaua/template/infrastructure/Main.class'
+                    ])
+                })
+        )
+    }
+}
+
+jacocoTestCoverageVerification {
+    afterEvaluate {
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, exclude: [
+                            'com/kaua/template/infrastructure/configurations/*',
+                            'com/kaua/template/infrastructure/Main.class'
+                    ])
+                })
+        )
+    }
+}
+
+tasks.named("jacocoTestReport") {
+    dependsOn(testCodeCoverageReport)
+}

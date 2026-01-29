@@ -1,0 +1,31 @@
+<configuration>
+    <import class="ch.qos.logback.core.ConsoleAppender"/>
+    <import class="ch.qos.logback.core.FileAppender"/>
+    <import class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"/>
+
+    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener"/>
+
+    <appender name="stdout_plain" class="ConsoleAppender">
+        <encoder
+                class="ch.qos.logback.core.encoder.LayoutWrappingEncoder"> <!-- https://www.codelord.net/2010/08/27/logging-with-a-context-users-in-logback-and-spring-security/ -->
+            <layout class="com.kaua.template.infrastructure.configurations.logback.PatternLayoutWithAttributes">
+                <pattern> <!-- https://github.com/onready/demo-spring-security-logging-pattern -->
+                    %d{HH:mm:ss.SSSZZ} [%thread] [%X{traceId}] [%X{spanId}] [%user] %-5level %logger{36} - %msg%n
+                </pattern>
+            </layout>
+        </encoder>
+    </appender>
+
+    <logger name="ch.qos.logback" level="WARN"/>
+    <logger name="org.mortbay.log" level="WARN"/>
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.springframework.beans" level="WARN"/>
+
+    <!-- enable DEBUG only for the application -->
+    <logger name="store" level="DEBUG"/>
+    <logger name="com.kaua.template" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="stdout_plain"/>
+    </root>
+</configuration>

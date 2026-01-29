@@ -1,0 +1,94 @@
+application:
+  otel:
+    memory-exporter: true
+
+idempotency-key:
+  storage:
+    type: in-memory
+
+logging:
+  level:
+    ROOT: WARN
+    com.kaua.template: DEBUG
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  undertow:
+    threads:
+      worker: 64
+      io: 4
+
+spring:
+  threads:
+    virtual:
+      enabled: true
+  flyway:
+    enabled: false
+  datasource: # change this to your database, postgresql, mysql or other
+    url: jdbc:postgresql://${postgres.url}/${postgres.schema}
+    username: ${postgres.username}
+    password: ${postgres.password}
+    hikari:
+      auto-commit: false
+      connection-timeout: 250
+      max-lifetime: 600000
+      maximum-pool-size: 20
+      minimum-idle: 10
+      pool-name: master
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      "[hibernate.dialect]": org.hibernate.dialect.PostgreSQLDialect # change this to your database, postgresql, mysql or other
+      "[hibernate.generate_statistics]": false
+      "[hibernate.connection.provider_disables_autocommit]": true
+      hibernate:
+        jdbc:
+          batch_size: 10
+        order_inserts: true
+        order_updates: true
+  data:
+    redis:
+      database: 0
+      host: ${redis.host}
+      port: ${redis.port}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/api
+          jwk-set-uri: http://localhost:8081/api/.well-known/jwks.json
+
+# expondo rotas: /actuator/<health, info, metrics>
+management:
+  otlp:
+    metrics:
+      export:
+        url: ${opentelemetry.metrics.endpoint}
+        resourceAttributes:
+          service.name: ${application.name}
+          deployment.environment: ${application.environment}
+        step: 30s
+        batchSize: 10000
+      enable-all: true
+      distribution:
+        percentiles-histogram:
+          http:
+            server:
+              requests: true
+        slo[http.server.requests]: "25ms, 50ms, 100ms, 200ms, 400ms, 800ms, 1500ms"
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true

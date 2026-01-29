@@ -1,0 +1,106 @@
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - SPAN_STORAGE_TYPE=elasticsearch   # Define Elasticsearch como backend de armazenamento
+      - ES_SERVER_URLS=http://elasticsearch:9200  # URL do Elasticsearch
+      - ES_INDEX_PREFIX=jaeger
+      - ES_HEALTH_CHECK_TIMEOUT=2m
+    #      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Web UI
+      - "14250:14250"
+      - "14268:14268"
+    depends_on:
+      - elasticsearch
+    networks:
+      - observability
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - observability
+
+  elasticsearch:
+    image: elasticsearch:8.17.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "bootstrap.memory_lock=true"
+      - "cluster.name=template-observability"
+      - "node.name=template-observability01"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "xpack.security.enabled=false"
+    #      - "ELASTIC_PASSWORD=elastic"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - observability
+
+  kibana:
+    image: kibana:8.17.0
+    container_name: kibana
+    environment:
+      - "ELASTICSEARCH_URL=http://elasticsearch:9200"
+    #      - "ELASTICSEARCH_USERNAME=elastic"
+    #      - "ELASTICSEARCH_PASSWORD=elastic"
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - observability
+
+  grafana: # Dashboard 6756
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - observability
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "1888:1888" # pprof extension
+      - "13133:13133" # health_check extension
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # http gRPC receiver
+      - "55679:55679" # zpages extension
+      - "9464:9464"
+    depends_on:
+      - jaeger
+      - prometheus
+      - elasticsearch
+    networks:
+      - observability
+
+volumes:
+  elasticsearch-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  observability:
+    name: observability

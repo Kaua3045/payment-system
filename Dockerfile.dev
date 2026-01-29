@@ -1,0 +1,36 @@
+FROM gradle:8.5-jdk21 AS builder
+
+WORKDIR /app
+
+# Copy all (including gradle/, gradlew, settings.gradle, build.gradle, modules)
+COPY . .
+
+RUN ./gradlew clean build -x test --no-daemon
+
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+COPY --from=builder /app/build/libs/*.jar application.jar
+
+#ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /opentelemetry-javaagent.jar
+
+# Download OpenTelemetry agent on build step, using curl + simple validation
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && curl -fSL https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar -o /opentelemetry-javaagent.jar \
+ && chmod 644 /opentelemetry-javaagent.jar \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_TOOL_OPTIONS="-javaagent:/opentelemetry-javaagent.jar"
+
+RUN chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8081
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8081/api/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "application.jar"]

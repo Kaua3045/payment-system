@@ -1,0 +1,99 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: detailed
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  elasticsearch:
+    endpoint: http://elasticsearch:9200
+    tls:
+      insecure_skip_verify: true
+    mapping: # default is none
+      mode: none
+  #    user: "elastic"
+  #    password: "elastic"
+  prometheus:
+    endpoint: 0.0.0.0:9464
+    resource_to_telemetry_conversion:
+      enabled: true
+
+processors:
+  filter/spans-to-drop:
+    error_mode: ignore
+    traces:
+      span:
+        - IsMatch(attributes["url.full"], "http://otel-collector:4318/v1/metrics")
+        - IsMatch(attributes["url.path"], "/api/actuator/health")
+
+  transform:
+    log_statements:
+      - context: log
+        statements:
+          - delete_key(attributes, "code.function")
+          - delete_key(attributes, "code.lineno")
+
+  resource:
+    attributes:
+      - key: "process.pid"
+        action: delete
+      - key: "process.executable.path"
+        action: delete
+      - key: "process.command_line"
+        action: delete
+      - key: "process.runtime.name"
+        action: delete
+      - key: "telemetry.sdk.language"
+        action: delete
+      - key: "telemetry.sdk.name"
+        action: delete
+      - key: "telemetry.sdk.version"
+        action: delete
+
+  batch: {}
+
+  transform/logs:
+    log_statements:
+      - context: log
+        statements:
+          - delete_key(attributes, "code.function")
+          - delete_key(attributes, "code.lineno")
+      - context: resource
+        statements:
+          - set(attributes["elasticsearch.index"], Concat(["logs", attributes["service.name"], attributes["deployment.environment"]], "-"))
+
+  transform/traces:
+    trace_statements:
+      - context: spanevent
+        statements:
+          - set(attributes["elasticsearch.index"], Concat(["traces", attributes["service.name"], attributes["deployment.environment"]], "-"))
+      - context: resource
+        statements:
+          - set(attributes["elasticsearch.index"], Concat(["traces", attributes["service.name"], attributes["deployment.environment"]], "-"))
+
+extensions:
+  health_check: {}
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [filter/spans-to-drop, transform/traces]
+      exporters: [debug, elasticsearch]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [prometheus]
+    logs: # https://www.elastic.co/observability-labs/blog/logstash-to-otel
+      receivers: [otlp]
+      processors: [transform, transform/logs, resource]
+      exporters: [elasticsearch]

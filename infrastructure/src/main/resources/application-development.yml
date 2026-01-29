@@ -1,0 +1,37 @@
+application:
+  otel:
+    memory-exporter: true
+  name: events-platform
+  environment: ${DEPLOYMENT_ENVIRONMENT_NAME:dev}
+  instance: events-platform-01
+
+redis:
+  host: localhost
+  port: 6379
+
+server:
+  undertow:
+    threads:
+      worker: 10
+      io: 2
+
+spring:
+  datasource: # change this configurations to your database
+    url: jdbc:postgresql://localhost:5434/template
+    username: postgres
+    password: 123456
+  jpa:
+    show-sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  health:
+    redis:
+      enabled: false
+
+opentelemetry:
+  metrics:
+    #    endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT} # For Production
+    endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://localhost:4317/v1/metrics}
