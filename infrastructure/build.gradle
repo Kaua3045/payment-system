@@ -85,7 +85,7 @@ jacocoTestReport {
                 files(classDirectories.files.collect {
                     fileTree(dir: it, exclude: [
                             'com/payment/system/infrastructure/configurations/*',
-                            'com/payment/system/processor/infrastructure/jdbc/*',
+                            'com/payment/system/infrastructure/jdbc/*',
                             'com/payment/system/infrastructure/Main.class'
                     ])
                 })
@@ -108,7 +108,7 @@ testCodeCoverageReport {
                 files(classDirectories.files.collect {
                     fileTree(dir: it, exclude: [
                             'com/payment/system/infrastructure/configurations/*',
-                            'com/payment/system/processor/infrastructure/jdbc/*',
+                            'com/payment/system/infrastructure/jdbc/*',
                             'com/payment/system/infrastructure/Main.class'
                     ])
                 })
@@ -122,7 +122,7 @@ jacocoTestCoverageVerification {
                 files(classDirectories.files.collect {
                     fileTree(dir: it, exclude: [
                             'com/payment/system/infrastructure/configurations/*',
-                            'com/payment/system/processor/infrastructure/jdbc/*',
+                            'com/payment/system/infrastructure/jdbc/*',
                             'com/payment/system/infrastructure/Main.class'
                     ])
                 })
