@@ -1,0 +1,4 @@
+# Banco de dados escolhido
+- Utilizamos o PostgreSQL como nosso sistema de gerenciamento de banco de dados relacional (RDBMS) devido à sua robustez, escalabilidade e suporte a funcionalidades avançadas que atendem às necessidades do nosso sistema financeiro.
+- Vamos utilizar o Redis como um banco de dados em memória para armazenar dados temporários e melhorar o desempenho de operações que exigem alta velocidade de acesso, como cache para o controle de idempotência.
+- O PostgreSQL será responsável por armazenar os dados persistentes, como informações de contas, transações e chaves Pix, garantindo a integridade e consistência dos dados.
