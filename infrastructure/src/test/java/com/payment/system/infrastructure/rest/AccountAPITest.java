@@ -5,6 +5,9 @@ import com.payment.system.ControllerTest;
 import com.payment.system.application.usecases.accounts.create.CreateAccountCommand;
 import com.payment.system.application.usecases.accounts.create.CreateAccountOutput;
 import com.payment.system.application.usecases.accounts.create.CreateAccountUseCase;
+import com.payment.system.application.usecases.accounts.retrieve.id.GetAccountByIdOutput;
+import com.payment.system.application.usecases.accounts.retrieve.id.GetAccountByIdUseCase;
+import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import org.junit.jupiter.api.Assertions;
@@ -31,6 +34,9 @@ class AccountAPITest {
 
     @MockitoBean
     private CreateAccountUseCase createAccountUseCase;
+
+    @MockitoBean
+    private GetAccountByIdUseCase getAccountByIdUseCase;
 
     @Captor
     private ArgumentCaptor<CreateAccountCommand> createAccountCommandCaptor;
@@ -76,5 +82,30 @@ class AccountAPITest {
         final var aCommandCaptured = createAccountCommandCaptor.getValue();
 
         Assertions.assertEquals(aUserId, aCommandCaptured.userId());
+    }
+
+    @Test
+    void givenAValidId_whenCallsGetAccountById_shouldReturnHttp200() throws Exception {
+        final var aAccount = Account.newAccount("user-123");
+
+        Mockito.when(getAccountByIdUseCase.execute(any()))
+                .thenReturn(GetAccountByIdOutput.from(aAccount));
+
+        final var aRequest = MockMvcRequestBuilders.get("/v1/accounts/{accountId}", aAccount.getId().value().toString())
+                .with(ApiTest.admin())
+                .accept(MediaType.APPLICATION_JSON_VALUE);
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(aAccount.getId().value().toString()))
+                .andExpect(jsonPath("$.user_id").value(aAccount.getUserId()))
+                .andExpect(jsonPath("$.status").value(aAccount.getStatus().name()))
+                .andExpect(jsonPath("$.created_at").value(aAccount.getCreatedAt().toString()))
+                .andExpect(jsonPath("$.updated_at").value(aAccount.getUpdatedAt().toString()));
+
+        Mockito.verify(getAccountByIdUseCase, Mockito.times(1)).execute(any());
     }
 }
