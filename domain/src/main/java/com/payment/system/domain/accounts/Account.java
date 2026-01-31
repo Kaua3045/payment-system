@@ -54,6 +54,28 @@ public class Account extends AggregateRoot<AccountId> {
         );
     }
 
+    public static Account with(
+            final AccountId aAccountId,
+            final long aVersion,
+            final String aUserId,
+            final Money aBalance,
+            final AccountStatus aStatus,
+            final Instant aCreatedAt,
+            final Instant aUpdatedAt,
+            final Instant aClosedAt
+    ) {
+        return new Account(
+                aAccountId,
+                aVersion,
+                aUserId,
+                aBalance,
+                aStatus,
+                aCreatedAt,
+                aUpdatedAt,
+                aClosedAt
+        );
+    }
+
     public String getUserId() {
         return userId;
     }
