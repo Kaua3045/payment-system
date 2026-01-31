@@ -1,7 +1,9 @@
 package com.payment.system.domain.accounts;
 
 import com.payment.system.domain.UnitTest;
+import com.payment.system.domain.validation.handler.NotificationHandler;
 import com.payment.system.domain.valueobjects.Money;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,6 +24,7 @@ class AccountTest extends UnitTest {
         assertNotNull(aAccount.getCreatedAt());
         assertNotNull(aAccount.getUpdatedAt());
         assertTrue(aAccount.getClosedAt().isEmpty());
+        Assertions.assertDoesNotThrow(() -> aAccount.validate(NotificationHandler.create()));
     }
 
     @Test
