@@ -4,6 +4,7 @@ import com.payment.system.application.usecases.accounts.create.CreateAccountComm
 import com.payment.system.application.usecases.accounts.create.CreateAccountUseCase;
 import com.payment.system.infrastructure.accounts.req.CreateAccountRequest;
 import com.payment.system.infrastructure.accounts.res.CreateAccountResponse;
+import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import com.payment.system.infrastructure.rest.AccountAPI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ public class AccountRestController implements AccountAPI {
         this.createAccountUseCase = Objects.requireNonNull(createAccountUseCase);
     }
 
+    @IdempotencyKey
     @Override
     public ResponseEntity<CreateAccountResponse> createAccount(final CreateAccountRequest request) {
         log.info("Received create account request: {}", request);
