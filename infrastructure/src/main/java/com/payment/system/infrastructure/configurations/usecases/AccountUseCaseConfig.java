@@ -3,6 +3,8 @@ package com.payment.system.infrastructure.configurations.usecases;
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.usecases.accounts.create.CreateAccountUseCase;
 import com.payment.system.application.usecases.accounts.create.DefaultCreateAccountUseCase;
+import com.payment.system.application.usecases.accounts.retrieve.id.DefaultGetAccountByIdUseCase;
+import com.payment.system.application.usecases.accounts.retrieve.id.GetAccountByIdUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,5 +16,12 @@ public class AccountUseCaseConfig {
             final AccountRepository accountRepository
     ) {
         return new DefaultCreateAccountUseCase(accountRepository);
+    }
+
+    @Bean
+    public GetAccountByIdUseCase getAccountByIdUseCase(
+            final AccountRepository accountRepository
+    ) {
+        return new DefaultGetAccountByIdUseCase(accountRepository);
     }
 }
