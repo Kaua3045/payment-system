@@ -56,8 +56,8 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
         final var aParams = new HashMap<String, Object>();
         aParams.put("id", aPixKey.getId().value().toString());
         aParams.put("version", aPixKey.getVersion());
-        aParams.put("type", aPixKey.getType().name());
-        aParams.put("value", aPixKey.getValue());
+        aParams.put("type", aPixKey.getKey().type().name());
+        aParams.put("value", aPixKey.getKey().value());
         aParams.put("accountId", aPixKey.getAccountId().value().toString());
         aParams.put("status", aPixKey.getStatus().name());
         aParams.put("createdAt", aPixKey.getCreatedAt());

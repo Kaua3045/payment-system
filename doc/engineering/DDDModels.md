@@ -33,6 +33,7 @@ updated_at
 - Uma conta pode ter múltiplas chaves pix associadas.
 - Chaves pix são usadas para identificar contas em transações.
 - Chaves pix podem ser ativadas ou desativadas sem serem deletadas.
+- Garantir que o `RANDOM` seja gerado de forma única e segura. No backend
 
 # Transaction
 ```

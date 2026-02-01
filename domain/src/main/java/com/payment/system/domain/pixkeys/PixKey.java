@@ -11,8 +11,7 @@ import java.util.Optional;
 
 public class PixKey extends AggregateRoot<PixKeyId> {
 
-    private PixKeyType type;
-    private String value;
+    private PixKeyValue key;
     private AccountId accountId;
     private PixKeyStatus status;
     private Instant createdAt;
@@ -22,8 +21,7 @@ public class PixKey extends AggregateRoot<PixKeyId> {
     private PixKey(
             final PixKeyId aPixKeyId,
             final long aVersion,
-            final PixKeyType aType,
-            final String aValue,
+            final PixKeyValue aKey,
             final AccountId anAccountId,
             final PixKeyStatus aStatus,
             final Instant aCreatedAt,
@@ -31,8 +29,7 @@ public class PixKey extends AggregateRoot<PixKeyId> {
             final Instant aDeletedAt
     ) {
         super(aPixKeyId, aVersion);
-        this.setType(aType);
-        this.setValue(aValue);
+        this.setKey(aKey);
         this.setAccountId(anAccountId);
         this.setStatus(aStatus);
         this.setCreatedAt(aCreatedAt);
@@ -41,8 +38,7 @@ public class PixKey extends AggregateRoot<PixKeyId> {
     }
 
     public static PixKey newPixKey(
-            final PixKeyType aType,
-            final String aValue,
+            final PixKeyValue aKey,
             final AccountId aAccountId
     ) {
         final var aId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
@@ -50,8 +46,7 @@ public class PixKey extends AggregateRoot<PixKeyId> {
         return new PixKey(
                 aId,
                 0L,
-                aType,
-                aValue,
+                aKey,
                 aAccountId,
                 PixKeyStatus.ACTIVE,
                 aNow,
@@ -63,8 +58,7 @@ public class PixKey extends AggregateRoot<PixKeyId> {
     public static PixKey with(
             final PixKeyId aPixKeyId,
             final long aVersion,
-            final PixKeyType aType,
-            final String aValue,
+            final PixKeyValue aKey,
             final AccountId anAccountId,
             final PixKeyStatus aStatus,
             final Instant aCreatedAt,
@@ -74,8 +68,7 @@ public class PixKey extends AggregateRoot<PixKeyId> {
         return new PixKey(
                 aPixKeyId,
                 aVersion,
-                aType,
-                aValue,
+                aKey,
                 anAccountId,
                 aStatus,
                 aCreatedAt,
@@ -84,12 +77,8 @@ public class PixKey extends AggregateRoot<PixKeyId> {
         );
     }
 
-    public PixKeyType getType() {
-        return type;
-    }
-
-    public String getValue() {
-        return value;
+    public PixKeyValue getKey() {
+        return key;
     }
 
     public AccountId getAccountId() {
@@ -112,14 +101,9 @@ public class PixKey extends AggregateRoot<PixKeyId> {
         return Optional.ofNullable(deletedAt);
     }
 
-    private void setType(final PixKeyType type) {
-        this.assertArgumentNotNull(type, "type", "should not be null");
-        this.type = type;
-    }
-
-    private void setValue(final String value) {
-        this.assertArgumentNotEmpty(value, "value", "should not be empty");
-        this.value = value;
+    private void setKey(final PixKeyValue key) {
+        this.assertArgumentNotNull(key, "key", "should not be null");
+        this.key = key;
     }
 
     private void setAccountId(final AccountId accountId) {
@@ -147,14 +131,15 @@ public class PixKey extends AggregateRoot<PixKeyId> {
     }
 
     @Override
-    public void validate(ValidationHandler aHandler) {}
+    public void validate(ValidationHandler aHandler) {
+    }
 
     @Override
     public String toString() {
         return "PixKey(" +
                 "id=" + getId().value().toString() +
-                ", type='" + type.name() + '\'' +
-                ", value='" + value + '\'' +
+                ", key='" + getKey().type() + '\'' +
+                ", value='" + getKey().value() + '\'' +
                 ", accountId=" + accountId.value().toString() +
                 ", status=" + status.name() +
                 ", createdAt=" + createdAt +

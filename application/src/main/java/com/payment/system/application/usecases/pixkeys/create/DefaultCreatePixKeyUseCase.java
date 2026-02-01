@@ -7,6 +7,7 @@ import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyType;
+import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.utils.ULID;
 
 import java.util.Objects;
@@ -36,9 +37,10 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
         final var aType = PixKeyType.from(input.type())
                 .orElseThrow(() -> NotFoundException.with("Pix key type %s not found".formatted(input.type())));
 
+        final var aPixKeyValueFactory = new PixKeyValueFactory();
+
         final var aPixKey = PixKey.newPixKey(
-                aType,
-                input.value(),
+                aPixKeyValueFactory.create(aType, input.value()),
                 new AccountId(ULID.fromString(input.accountId()))
         );
 
