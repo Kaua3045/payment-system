@@ -1,0 +1,18 @@
+package com.payment.system.infrastructure.configurations.usecases;
+
+import com.payment.system.application.repositories.PixKeyRepository;
+import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyUseCase;
+import com.payment.system.application.usecases.pixkeys.create.DefaultCreatePixKeyUseCase;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration(proxyBeanMethods = false)
+public class PixKeyUseCaseConfig {
+
+    @Bean
+    public CreatePixKeyUseCase createPixKeyUseCase(
+            final PixKeyRepository pixKeyRepository
+    ) {
+        return new DefaultCreatePixKeyUseCase(pixKeyRepository);
+    }
+}
