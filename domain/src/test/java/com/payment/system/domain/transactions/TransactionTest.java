@@ -2,6 +2,7 @@ package com.payment.system.domain.transactions;
 
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.handler.NotificationHandler;
@@ -17,12 +18,14 @@ class TransactionTest extends UnitTest {
     void givenAValidParams_whenCallsNewTransaction_thenInstantiateANewTransaction() {
         final var aFromAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
                 aFromAccountId,
                 aToAccountId,
+                aPixKeyId,
                 aAmount,
                 anIdempotencyKey
         );
@@ -30,11 +33,13 @@ class TransactionTest extends UnitTest {
         Assertions.assertNotNull(aTransaction);
         Assertions.assertEquals(aFromAccountId, aTransaction.getFromAccountId());
         Assertions.assertEquals(aToAccountId, aTransaction.getToAccountId());
+        Assertions.assertEquals(aPixKeyId, aTransaction.getPixKeyId());
         Assertions.assertEquals(aAmount, aTransaction.getAmount());
         Assertions.assertEquals(TransactionStatus.PENDING, aTransaction.getStatus());
         Assertions.assertEquals(anIdempotencyKey, aTransaction.getIdempotencyKey());
         Assertions.assertNotNull(aTransaction.getCreatedAt());
         Assertions.assertNotNull(aTransaction.getUpdatedAt());
+        Assertions.assertTrue(aTransaction.getFailureReason().isEmpty());
         Assertions.assertDoesNotThrow(() -> aTransaction.validate(NotificationHandler.create()));
     }
 
@@ -43,6 +48,7 @@ class TransactionTest extends UnitTest {
         final var aId = new TransactionId(IdentifierUtils.generateNewMonotonicULID());
         final var aFromAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var anIdempotencyKey = "unique-key-123";
         final var aStatus = TransactionStatus.PENDING;
@@ -53,9 +59,11 @@ class TransactionTest extends UnitTest {
                 1L,
                 aFromAccountId,
                 aToAccountId,
+                aPixKeyId,
                 aAmount,
                 aStatus,
                 anIdempotencyKey,
+                null,
                 aNow,
                 aNow
         );
@@ -70,6 +78,7 @@ class TransactionTest extends UnitTest {
         Assertions.assertEquals(anIdempotencyKey, aTransaction.getIdempotencyKey());
         Assertions.assertEquals(aNow, aTransaction.getCreatedAt());
         Assertions.assertEquals(aNow, aTransaction.getUpdatedAt());
+        Assertions.assertTrue(aTransaction.getFailureReason().isEmpty());
         Assertions.assertDoesNotThrow(() -> aTransaction.validate(NotificationHandler.create()));
     }
 
@@ -86,12 +95,14 @@ class TransactionTest extends UnitTest {
     void testCallToStringInTransaction() {
         final var aFromAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
                 aFromAccountId,
                 aToAccountId,
+                aPixKeyId,
                 aAmount,
                 anIdempotencyKey
         );
