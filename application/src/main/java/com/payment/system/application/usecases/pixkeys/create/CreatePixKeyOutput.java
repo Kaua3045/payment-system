@@ -11,7 +11,7 @@ public record CreatePixKeyOutput(
     public static CreatePixKeyOutput from(final PixKey aPixKey) {
         return new CreatePixKeyOutput(
                 aPixKey.getId().value().toString(),
-                aPixKey.getType().name(),
+                aPixKey.getKey().type().name(),
                 aPixKey.getAccountId().value().toString()
         );
     }
