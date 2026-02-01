@@ -49,8 +49,8 @@ class CreatePixKeyUseCaseTest extends UseCaseTest {
 
         Mockito.verify(pixKeyRepository, Mockito.times(1)).existsByValue(aValue);
         Mockito.verify(pixKeyRepository, Mockito.times(1)).save(argThat(aCmd ->
-                Objects.equals(aCmd.getType().name(), aType) &&
-                        Objects.equals(aCmd.getValue(), aValue) &&
+                Objects.equals(aCmd.getKey().type().name(), aType) &&
+                        Objects.equals(aCmd.getKey().value(), aValue) &&
                         Objects.equals(aCmd.getAccountId().value(), anAccountId)
         ));
     }
