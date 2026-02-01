@@ -100,6 +100,11 @@ public class Transaction extends AggregateRoot<TransactionId> {
         );
     }
 
+    public void complete() {
+        this.setStatus(TransactionStatus.COMPLETED);
+        this.setUpdatedAt(InstantUtils.now());
+    }
+
     public AccountId getFromAccountId() {
         return fromAccountId;
     }
