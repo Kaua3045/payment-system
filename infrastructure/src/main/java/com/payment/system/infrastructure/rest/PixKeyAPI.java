@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.rest;
 
+import com.payment.system.infrastructure.pixkeys.req.CreatePixKeyRequest;
 import com.payment.system.infrastructure.pixkeys.res.CreatePixKeyResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,5 +27,5 @@ public interface PixKeyAPI {
             @ApiResponse(responseCode = "422", description = "A business rule was violated"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    ResponseEntity<CreatePixKeyResponse> createPixKey(@RequestBody CreatePixKeyResponse request);
+    ResponseEntity<CreatePixKeyResponse> createPixKey(@RequestBody CreatePixKeyRequest request);
 }
