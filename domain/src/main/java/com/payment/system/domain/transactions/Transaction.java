@@ -2,20 +2,24 @@ package com.payment.system.domain.transactions;
 
 import com.payment.system.domain.AggregateRoot;
 import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.ValidationHandler;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.time.Instant;
+import java.util.Optional;
 
 public class Transaction extends AggregateRoot<TransactionId> {
 
     private AccountId fromAccountId;
     private AccountId toAccountId;
+    private PixKeyId pixKeyId;
     private Money amount;
     private TransactionStatus status;
     private String idempotencyKey;
+    private String failureReason;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -24,18 +28,22 @@ public class Transaction extends AggregateRoot<TransactionId> {
             final long aVersion,
             final AccountId aFromAccountId,
             final AccountId aToAccountId,
+            final PixKeyId aPixKeyId,
             final Money aAmount,
             final TransactionStatus aStatus,
             final String aIdempotencyKey,
+            final String aFailureReason,
             final Instant aCreatedAt,
             final Instant aUpdatedAt
     ) {
         super(aTransactionId, aVersion);
         this.setFromAccountId(aFromAccountId);
         this.setToAccountId(aToAccountId);
+        this.setPixKeyId(aPixKeyId);
         this.setAmount(aAmount);
         this.setStatus(aStatus);
         this.setIdempotencyKey(aIdempotencyKey);
+        this.setFailureReason(aFailureReason);
         this.setCreatedAt(aCreatedAt);
         this.setUpdatedAt(aUpdatedAt);
     }
@@ -43,6 +51,7 @@ public class Transaction extends AggregateRoot<TransactionId> {
     public static Transaction newTransaction(
             final AccountId fromAccountId,
             final AccountId toAccountId,
+            final PixKeyId pixKeyId,
             final Money amount,
             final String idempotencyKey
     ) {
@@ -53,9 +62,11 @@ public class Transaction extends AggregateRoot<TransactionId> {
                 0L,
                 fromAccountId,
                 toAccountId,
+                pixKeyId,
                 amount,
                 TransactionStatus.PENDING,
                 idempotencyKey,
+                null,
                 aNow,
                 aNow
         );
@@ -66,9 +77,11 @@ public class Transaction extends AggregateRoot<TransactionId> {
             final long aVersion,
             final AccountId aFromAccountId,
             final AccountId aToAccountId,
+            final PixKeyId aPixKeyId,
             final Money aAmount,
             final TransactionStatus aStatus,
             final String aIdempotencyKey,
+            final String aFailureReason,
             final Instant aCreatedAt,
             final Instant aUpdatedAt
     ) {
@@ -77,9 +90,11 @@ public class Transaction extends AggregateRoot<TransactionId> {
                 aVersion,
                 aFromAccountId,
                 aToAccountId,
+                aPixKeyId,
                 aAmount,
                 aStatus,
                 aIdempotencyKey,
+                aFailureReason,
                 aCreatedAt,
                 aUpdatedAt
         );
@@ -93,6 +108,10 @@ public class Transaction extends AggregateRoot<TransactionId> {
         return toAccountId;
     }
 
+    public PixKeyId getPixKeyId() {
+        return pixKeyId;
+    }
+
     public Money getAmount() {
         return amount;
     }
@@ -103,6 +122,10 @@ public class Transaction extends AggregateRoot<TransactionId> {
 
     public String getIdempotencyKey() {
         return idempotencyKey;
+    }
+
+    public Optional<String> getFailureReason() {
+        return Optional.ofNullable(failureReason);
     }
 
     public Instant getCreatedAt() {
@@ -123,6 +146,11 @@ public class Transaction extends AggregateRoot<TransactionId> {
         this.toAccountId = toAccountId;
     }
 
+    private void setPixKeyId(final PixKeyId pixKeyId) {
+        this.assertArgumentNotNull(pixKeyId, "pixKeyId", "should not be null");
+        this.pixKeyId = pixKeyId;
+    }
+
     private void setAmount(final Money amount) {
         this.assertArgumentNotNull(amount, "amount", "should not be null");
         this.amount = amount;
@@ -136,6 +164,10 @@ public class Transaction extends AggregateRoot<TransactionId> {
     private void setIdempotencyKey(final String idempotencyKey) {
         this.assertArgumentNotEmpty(idempotencyKey, "idempotencyKey", "should not be empty");
         this.idempotencyKey = idempotencyKey;
+    }
+
+    private void setFailureReason(final String failureReason) {
+        this.failureReason = failureReason;
     }
 
     private void setCreatedAt(final Instant createdAt) {
@@ -160,9 +192,11 @@ public class Transaction extends AggregateRoot<TransactionId> {
                 ", version=" + getVersion() +
                 ", fromAccountId=" + fromAccountId.value().toString() +
                 ", toAccountId=" + toAccountId.value().toString() +
+                ", pixKeyId=" + pixKeyId.value().toString() +
                 ", amount=" + amount.amount() +
                 ", status=" + status.name() +
                 ", idempotencyKey='" + idempotencyKey + '\'' +
+                ", failureReason='" + failureReason + '\'' +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 ')';
