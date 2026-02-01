@@ -1,6 +1,8 @@
 package com.payment.system.domain.accounts;
 
 import com.payment.system.domain.UnitTest;
+import com.payment.system.domain.exceptions.DomainException;
+import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.handler.NotificationHandler;
@@ -90,5 +92,46 @@ class AccountTest extends UnitTest {
         assertNotNull(toStringResult);
         assertTrue(toStringResult.contains("Account"));
         assertTrue(toStringResult.contains(aUserId));
+    }
+
+    @Test
+    void givenAValidAmount_whenCallsCredit_thenReturnCorrectValues() {
+        final var aUserId = "user-123";
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var expectedAmount = new BigDecimal("10.50");
+
+        aAccount.credit(expectedAmount);
+
+        Assertions.assertEquals(expectedAmount, aAccount.getBalance().amount());
+    }
+
+    @Test
+    void givenAValidAmount_whenCallsDebit_thenReturnCorrectValues() {
+        final var aUserId = "user-123";
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var expectedAmount = new BigDecimal("10.50");
+
+        aAccount.credit(expectedAmount);
+
+        Assertions.assertEquals(expectedAmount, aAccount.getBalance().amount());
+
+        aAccount.debit(expectedAmount);
+
+        Assertions.assertEquals(new BigDecimal("00.00"), aAccount.getBalance().amount());
+    }
+
+    @Test
+    void givenAnInvalidInsufficientAmount_whenCallsDebit_thenThrowsValidationException() {
+        final var aUserId = "user-123";
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var expectedErrorMessage = "Insufficient funds";
+
+        final var aException = Assertions.assertThrows(DomainException.class,
+                () -> aAccount.debit(new BigDecimal("10.00")));
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
     }
 }
