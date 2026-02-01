@@ -109,4 +109,25 @@ class TransactionTest extends UnitTest {
 
         Assertions.assertNotNull(aTransaction.toString());
     }
+
+    @Test
+    void givenAValidTransaction_whenCallsComplete_thenReturnUpdatedTransaction() {
+        final var aFromAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var aAmount = new Money(new BigDecimal("150.00"));
+        final var anIdempotencyKey = "unique-key-123";
+
+        final var aTransaction = Transaction.newTransaction(
+                aFromAccountId,
+                aToAccountId,
+                aPixKeyId,
+                aAmount,
+                anIdempotencyKey
+        );
+
+        aTransaction.complete();
+
+        Assertions.assertEquals(TransactionStatus.COMPLETED, aTransaction.getStatus());
+    }
 }
