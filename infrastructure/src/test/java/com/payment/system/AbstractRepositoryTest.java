@@ -1,8 +1,10 @@
 package com.payment.system;
 
 import com.payment.system.application.repositories.AccountRepository;
+import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.infrastructure.accounts.AccountJdbcRepository;
 import com.payment.system.infrastructure.jdbc.JdbcClientAdapter;
+import com.payment.system.infrastructure.pixkeys.PixKeyJdbcRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.test.jdbc.JdbcTestUtils;
 public class AbstractRepositoryTest {
 
     private static final String ACCOUNTS_TABLE = "accounts";
+    private static final String PIX_KEYS_TABLE = "pix_keys";
 
     @Autowired
     private JdbcClient jdbcClient;
@@ -26,17 +29,27 @@ public class AbstractRepositoryTest {
     private NamedParameterJdbcOperations operations;
 
     private AccountRepository accountRepository;
+    private PixKeyRepository pixKeyRepository;
 
     @BeforeEach
     void setUp() {
         this.accountRepository = new AccountJdbcRepository(new JdbcClientAdapter(jdbcClient, operations));
+        this.pixKeyRepository = new PixKeyJdbcRepository(new JdbcClientAdapter(jdbcClient, operations));
     }
 
     protected int countAccounts() {
         return JdbcTestUtils.countRowsInTable(jdbcClient, ACCOUNTS_TABLE);
     }
 
+    protected int countPixKeys() {
+        return JdbcTestUtils.countRowsInTable(jdbcClient, PIX_KEYS_TABLE);
+    }
+
     protected AccountRepository accountRepository() {
         return accountRepository;
+    }
+
+    protected PixKeyRepository pixKeyRepository() {
+        return pixKeyRepository;
     }
 }
