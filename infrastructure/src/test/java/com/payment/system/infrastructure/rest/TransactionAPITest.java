@@ -6,6 +6,7 @@ import com.payment.system.application.usecases.transactions.create.CreateTransac
 import com.payment.system.application.usecases.transactions.create.CreateTransactionOutput;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
 import com.payment.system.domain.transactions.TransactionStatus;
+import com.payment.system.domain.transactions.TransactionType;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import org.junit.jupiter.api.Assertions;
@@ -49,6 +50,7 @@ class TransactionAPITest {
 
         final var expectedTransactionId = IdentifierUtils.generateNewMonotonicULID().toString();
         final var expectedStatus = TransactionStatus.COMPLETED.name();
+        final var expectedType = TransactionType.TRANSFER.name();
 
         final var aRequestBody = """
                 {
@@ -62,7 +64,8 @@ class TransactionAPITest {
         Mockito.when(createTransactionUseCase.execute(any()))
                 .thenReturn(new CreateTransactionOutput(
                         expectedTransactionId,
-                        expectedStatus
+                        expectedStatus,
+                        expectedType
                 ));
 
         final var aRequest = MockMvcRequestBuilders.post("/v1/transactions")
@@ -78,7 +81,8 @@ class TransactionAPITest {
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.transaction_id").value(expectedTransactionId))
-                .andExpect(jsonPath("$.status").value(expectedStatus));
+                .andExpect(jsonPath("$.status").value(expectedStatus))
+                .andExpect(jsonPath("$.type").value(expectedType));
 
         Mockito.verify(createTransactionUseCase, Mockito.times(1)).execute(createTransactionCommandCaptor.capture());
 
