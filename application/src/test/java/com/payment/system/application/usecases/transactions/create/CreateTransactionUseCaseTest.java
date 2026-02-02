@@ -82,6 +82,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 fromAccount.getId().value().toString(),
                 pixKey.getKey().value(),
+                pixKey.getKey().type().name(),
                 BigDecimal.TEN,
                 idempotencyKey
         );
@@ -120,6 +121,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 "acc",
                 "pix",
+                "random",
                 BigDecimal.TEN,
                 "idem"
         );
@@ -145,6 +147,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 "acc",
                 "pix",
+                "random",
                 BigDecimal.ZERO,
                 "idem"
         );
@@ -173,6 +176,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 "acc",
                 "pix",
+                "random",
                 BigDecimal.TEN,
                 "idem"
         );
@@ -209,6 +213,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 "acc",
                 "pix",
+                "random",
                 BigDecimal.TEN,
                 "idem"
         );
@@ -239,6 +244,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 "acc",
                 "pix",
+                "random",
                 BigDecimal.TEN,
                 "idem"
         );
@@ -286,11 +292,40 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var command = CreateTransactionCommand.with(
                 from.getId().value().toString(),
                 "pix",
+                "random",
                 BigDecimal.TEN,
                 "idem"
         );
 
         final var aException = Assertions.assertThrows(DomainException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void givenAnInvalidPixKeyType_whenExecute_shouldThrowNotFoundException() {
+        final var from = Account.newAccount("user-1234");
+
+        final var expectedErrorMessage = "PixKeyType invalid not found";
+
+        Mockito.when(transactionRepository.existsByIdempotencyKey(any()))
+                .thenReturn(false);
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(accountRepository.accountOfId(from.getId().value().toString()))
+                .thenReturn(Optional.of(from));
+
+        final var command = CreateTransactionCommand.with(
+                from.getId().value().toString(),
+                "pix",
+                "invalid",
+                BigDecimal.TEN,
+                "idem"
+        );
+
+        final var aException = Assertions.assertThrows(NotFoundException.class, () -> useCase.execute(command));
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
     }
