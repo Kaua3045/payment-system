@@ -4,6 +4,7 @@ import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.transactions.Transaction;
+import com.payment.system.domain.transactions.TransactionType;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.valueobjects.Money;
 import com.payment.system.infrastructure.exceptions.ConflictException;
@@ -28,6 +29,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new AccountId(IdentifierUtils.generateNewMonotonicULID()),
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
                 "1238712712678368126834"
         );
 
@@ -40,6 +42,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
         Assertions.assertEquals(aTransaction.getToAccountId(), aSavedTransaction.getToAccountId());
         Assertions.assertEquals(aTransaction.getPixKeyId(), aSavedTransaction.getPixKeyId());
         Assertions.assertEquals(aTransaction.getStatus(), aSavedTransaction.getStatus());
+        Assertions.assertEquals(aTransaction.getType(), aSavedTransaction.getType());
         Assertions.assertEquals(aTransaction.getIdempotencyKey(), aSavedTransaction.getIdempotencyKey());
         Assertions.assertEquals(aTransaction.getCreatedAt(), aSavedTransaction.getCreatedAt());
         Assertions.assertEquals(aTransaction.getUpdatedAt(), aSavedTransaction.getUpdatedAt());
@@ -55,6 +58,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new AccountId(IdentifierUtils.generateNewMonotonicULID()),
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
                 "1238712712678368126834"
         );
 
@@ -71,6 +75,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
         Assertions.assertEquals(aTransaction.getToAccountId(), aSavedTransaction.getToAccountId());
         Assertions.assertEquals(aTransaction.getPixKeyId(), aSavedTransaction.getPixKeyId());
         Assertions.assertEquals(aTransaction.getStatus(), aSavedTransaction.getStatus());
+        Assertions.assertEquals(aTransaction.getType(), aSavedTransaction.getType());
         Assertions.assertEquals(aTransaction.getIdempotencyKey(), aSavedTransaction.getIdempotencyKey());
         Assertions.assertEquals(aTransaction.getCreatedAt(), aSavedTransaction.getCreatedAt());
         Assertions.assertEquals(aTransaction.getUpdatedAt(), aSavedTransaction.getUpdatedAt());
@@ -97,6 +102,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new AccountId(IdentifierUtils.generateNewMonotonicULID()),
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
                 "1238712712678368126834"
         );
 
