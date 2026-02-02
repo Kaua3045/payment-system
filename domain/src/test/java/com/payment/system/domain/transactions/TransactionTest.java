@@ -20,6 +20,7 @@ class TransactionTest extends UnitTest {
         final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
+        final var aType = TransactionType.TRANSFER;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -27,6 +28,7 @@ class TransactionTest extends UnitTest {
                 aToAccountId,
                 aPixKeyId,
                 aAmount,
+                aType,
                 anIdempotencyKey
         );
 
@@ -36,6 +38,7 @@ class TransactionTest extends UnitTest {
         Assertions.assertEquals(aPixKeyId, aTransaction.getPixKeyId());
         Assertions.assertEquals(aAmount, aTransaction.getAmount());
         Assertions.assertEquals(TransactionStatus.PENDING, aTransaction.getStatus());
+        Assertions.assertEquals(aType, aTransaction.getType());
         Assertions.assertEquals(anIdempotencyKey, aTransaction.getIdempotencyKey());
         Assertions.assertNotNull(aTransaction.getCreatedAt());
         Assertions.assertNotNull(aTransaction.getUpdatedAt());
@@ -52,6 +55,7 @@ class TransactionTest extends UnitTest {
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var anIdempotencyKey = "unique-key-123";
         final var aStatus = TransactionStatus.PENDING;
+        final var aType = TransactionType.TRANSFER;
         final var aNow = InstantUtils.now();
 
         final var aTransaction = Transaction.with(
@@ -62,6 +66,7 @@ class TransactionTest extends UnitTest {
                 aPixKeyId,
                 aAmount,
                 aStatus,
+                aType,
                 anIdempotencyKey,
                 null,
                 aNow,
@@ -75,6 +80,7 @@ class TransactionTest extends UnitTest {
         Assertions.assertEquals(aToAccountId, aTransaction.getToAccountId());
         Assertions.assertEquals(aAmount, aTransaction.getAmount());
         Assertions.assertEquals(aStatus, aTransaction.getStatus());
+        Assertions.assertEquals(aType, aTransaction.getType());
         Assertions.assertEquals(anIdempotencyKey, aTransaction.getIdempotencyKey());
         Assertions.assertEquals(aNow, aTransaction.getCreatedAt());
         Assertions.assertEquals(aNow, aTransaction.getUpdatedAt());
@@ -97,6 +103,7 @@ class TransactionTest extends UnitTest {
         final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
+        final var aType = TransactionType.TRANSFER;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -104,6 +111,7 @@ class TransactionTest extends UnitTest {
                 aToAccountId,
                 aPixKeyId,
                 aAmount,
+                aType,
                 anIdempotencyKey
         );
 
@@ -116,6 +124,7 @@ class TransactionTest extends UnitTest {
         final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
+        final var aType = TransactionType.TRANSFER;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -123,11 +132,21 @@ class TransactionTest extends UnitTest {
                 aToAccountId,
                 aPixKeyId,
                 aAmount,
+                aType,
                 anIdempotencyKey
         );
 
         aTransaction.complete();
 
         Assertions.assertEquals(TransactionStatus.COMPLETED, aTransaction.getStatus());
+    }
+
+    @Test
+    void givenAnInvalidTypeName_whenCallsTransactionTypeFrom_thenReturnEmpty() {
+        final var invalidTypeName = "INVALID_TYPE";
+
+        final var type = TransactionType.from(invalidTypeName);
+
+        Assertions.assertTrue(type.isEmpty());
     }
 }
