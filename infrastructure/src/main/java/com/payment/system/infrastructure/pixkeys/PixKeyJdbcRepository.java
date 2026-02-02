@@ -1,8 +1,13 @@
 package com.payment.system.infrastructure.pixkeys;
 
 import com.payment.system.application.repositories.PixKeyRepository;
-import com.payment.system.domain.pixkeys.PixKey;
+import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.exceptions.NotFoundException;
+import com.payment.system.domain.pixkeys.*;
+import com.payment.system.domain.utils.ULID;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
+import com.payment.system.infrastructure.jdbc.JdbcUtils;
+import com.payment.system.infrastructure.jdbc.RowMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -12,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Component
 public class PixKeyJdbcRepository implements PixKeyRepository {
@@ -43,6 +49,12 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
         return this.databaseClient.count(aSql, Map.of("value", value)) > 0;
     }
 
+    @Override
+    public Optional<PixKey> pixKeyOfActiveByValue(final String value) {
+        final var aSql = "SELECT * FROM pix_keys WHERE status = 'ACTIVE' AND key_value = :value";
+        return this.databaseClient.queryOne(aSql, Map.of("value", value), pixKeyMapper());
+    }
+
     private void create(final PixKey aPixKey) {
         final var aSql = """
                 INSERT INTO pix_keys (id, type, key_value, account_id, status, created_at, updated_at, deleted_at, version)
@@ -65,5 +77,26 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
         aParams.put("deletedAt", aPixKey.getDeletedAt().orElse(null));
 
         return this.databaseClient.update(aSql, aParams);
+    }
+
+    private RowMap<PixKey> pixKeyMapper() {
+        return rs -> {
+            final var aType = rs.getString("type");
+            final var aPixKeyType = PixKeyType.from(aType)
+                    .orElseThrow(() -> NotFoundException.with("PixKeyType %s not found".formatted(aType)));
+
+            return PixKey.with(
+                    new PixKeyId(ULID.fromString(rs.getString("id"))),
+                    rs.getLong("version"),
+                    new PixKeyValueFactory().create(
+                            aPixKeyType,
+                            rs.getString("key_value")),
+                    new AccountId(ULID.fromString(rs.getString("account_id"))),
+                    PixKeyStatus.from(rs.getString("status")).orElse(null),
+                    JdbcUtils.getInstant(rs, "created_at"),
+                    JdbcUtils.getInstant(rs, "updated_at"),
+                    JdbcUtils.getInstant(rs, "deleted_at")
+            );
+        };
     }
 }
