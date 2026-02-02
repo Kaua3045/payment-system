@@ -35,6 +35,7 @@ public class TransactionRestController implements TransactionAPI {
         final var aCommand = CreateTransactionCommand.with(
                 request.fromAccountId(),
                 request.pixKey(),
+                request.pixKeyType(),
                 request.amount(),
                 idempotencyKey
         );
