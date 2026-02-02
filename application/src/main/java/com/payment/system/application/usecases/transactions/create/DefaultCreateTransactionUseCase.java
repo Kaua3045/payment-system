@@ -10,6 +10,8 @@ import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
+import com.payment.system.domain.pixkeys.PixKeyType;
+import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.valueobjects.Money;
 
@@ -57,7 +59,12 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 throw DomainException.with("From account is not active");
             }
 
-            final var aPixKey = this.pixKeyRepository.pixKeyOfActiveByValue(input.pixKey())
+            final var aPixKeyType = PixKeyType.from(input.pixKeyType())
+                    .orElseThrow(() -> NotFoundException.with("PixKeyType %s not found".formatted(input.pixKeyType())));
+
+            final var aKey = new PixKeyValueFactory().create(aPixKeyType, input.pixKey());
+
+            final var aPixKey = this.pixKeyRepository.pixKeyOfActiveByValue(aKey.value())
                     .orElseThrow(NotFoundException.with(PixKey.class, "value", input.pixKey()));
 
             final var aToAccount = this.accountRepository.accountOfId(aPixKey.getAccountId().value().toString())

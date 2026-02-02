@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record CreateTransactionCommand(
         String fromAccountId,
         String pixKey,
+        String pixKeyType,
         BigDecimal amount,
         String idempotencyKey
 ) {
@@ -12,12 +13,14 @@ public record CreateTransactionCommand(
     public static CreateTransactionCommand with(
             final String aFromAccountId,
             final String aPixKey,
+            final String aPixKeyType,
             final BigDecimal aAmount,
             final String aIdempotencyKey
     ) {
         return new CreateTransactionCommand(
                 aFromAccountId,
                 aPixKey,
+                aPixKeyType,
                 aAmount,
                 aIdempotencyKey
         );
