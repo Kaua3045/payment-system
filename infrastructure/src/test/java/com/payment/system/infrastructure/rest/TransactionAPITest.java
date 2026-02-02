@@ -42,6 +42,7 @@ class TransactionAPITest {
     void givenAValidRequest_whenCallsCreateTransaction_shouldReturnHttp201() throws Exception {
         final var aFromAccountId = IdentifierUtils.generateNewMonotonicULID().toString();
         final var aPixKey = "61268368712361";
+        final var aPixKeyType = "cpf";
         final var aAmount = new BigDecimal("10.50");
 
         final var aIdempotencyKey = IdentifierUtils.generateNewId();
@@ -53,9 +54,10 @@ class TransactionAPITest {
                 {
                     "from_account_id": "%s",
                     "pix_key": "%s",
+                    "pix_key_type": "%s",
                     "amount": "%s"
                 }
-                """.formatted(aFromAccountId, aPixKey, aAmount);
+                """.formatted(aFromAccountId, aPixKey, aPixKeyType, aAmount);
 
         Mockito.when(createTransactionUseCase.execute(any()))
                 .thenReturn(new CreateTransactionOutput(
