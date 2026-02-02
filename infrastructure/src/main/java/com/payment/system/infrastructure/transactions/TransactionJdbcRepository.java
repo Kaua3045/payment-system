@@ -50,8 +50,8 @@ public class TransactionJdbcRepository implements TransactionRepository {
 
     private void create(final Transaction transaction) {
         final var aSql = """
-                INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, idempotency_key, failure_reason, created_at, updated_at, version)
-                VALUES (:id, :fromAccountId, :toAccountId, :pixKeyId, :amount, :status, :idempotencyKey, :failureReason, :createdAt, :updatedAt, (:version +1))
+                INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, idempotency_key, failure_reason, created_at, updated_at, version)
+                VALUES (:id, :fromAccountId, :toAccountId, :pixKeyId, :amount, :status, :type, :idempotencyKey, :failureReason, :createdAt, :updatedAt, (:version +1))
                 """;
 
         executeUpdate(aSql, transaction);
@@ -60,7 +60,7 @@ public class TransactionJdbcRepository implements TransactionRepository {
     private void update(final Transaction transaction) {
         final var aSql = """
                 UPDATE transactions
-                SET version = :version + 1, status = :status, updated_at = :updatedAt
+                SET version = :version + 1, status = :status, updated_at = :updatedAt, failure_reason = :failureReason
                 WHERE id = :id AND version = :version
                 """;
 
@@ -78,6 +78,7 @@ public class TransactionJdbcRepository implements TransactionRepository {
         aParams.put("pixKeyId", aTransaction.getPixKeyId().value().toString());
         aParams.put("amount", aTransaction.getAmount().amount());
         aParams.put("status", aTransaction.getStatus().name());
+        aParams.put("type", aTransaction.getType().name());
         aParams.put("idempotencyKey", aTransaction.getIdempotencyKey());
         aParams.put("failureReason", aTransaction.getFailureReason().orElse(null));
         aParams.put("createdAt", aTransaction.getCreatedAt());
