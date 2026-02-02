@@ -6,6 +6,7 @@ import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.utils.ULID;
 import com.payment.system.domain.valueobjects.Money;
+import com.payment.system.infrastructure.exceptions.ConflictException;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
 import com.payment.system.infrastructure.jdbc.JdbcUtils;
 import com.payment.system.infrastructure.jdbc.RowMap;
@@ -38,6 +39,10 @@ public class AccountJdbcRepository implements AccountRepository {
             log.info("Creating a new account with ID: {}", anAccount.getId().value().toString());
             create(anAccount);
             log.info("Account created with ID: {}", anAccount.getId().value().toString());
+        } else {
+            log.info("Updating account with ID: {}", anAccount.getId().value().toString());
+            update(anAccount);
+            log.info("Updated account with ID: {}", anAccount.getId().value().toString());
         }
 
         anAccount.incrementVersion();
@@ -57,6 +62,19 @@ public class AccountJdbcRepository implements AccountRepository {
                 """;
 
         executeUpdate(aSql, anAccount);
+    }
+
+    private void update(final Account anAccount) {
+        final var aSql = """
+                UPDATE accounts
+                SET version = :version + 1, balance = :balance, status = :status, updated_at = :updatedAt, closed_at = :closedAt
+                WHERE id = :id AND version = :version
+                """;
+
+        if (executeUpdate(aSql, anAccount) == 0) {
+            throw ConflictException.with("Account with identifier %s and version %d does not match, account was updated by another transaction"
+                    .formatted(anAccount.getId().value(), anAccount.getVersion()));
+        }
     }
 
     private int executeUpdate(final String aSql, final Account anAccount) {
