@@ -5,13 +5,15 @@ import com.payment.system.application.usecases.transactions.create.CreateTransac
 
 public record CreateTransactionResponse(
         @JsonProperty("transaction_id") String transactionId,
-        @JsonProperty("status") String status
+        @JsonProperty("status") String status,
+        @JsonProperty("type") String type
 ) {
 
     public static CreateTransactionResponse from(final CreateTransactionOutput aOutput) {
         return new CreateTransactionResponse(
                 aOutput.transactionId(),
-                aOutput.status()
+                aOutput.status(),
+                aOutput.type()
         );
     }
 }
