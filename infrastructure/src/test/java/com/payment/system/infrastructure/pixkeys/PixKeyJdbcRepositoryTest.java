@@ -2,12 +2,14 @@ package com.payment.system.infrastructure.pixkeys;
 
 import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.utils.IdentifierUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.jdbc.Sql;
 
 class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
 
@@ -58,5 +60,21 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
         final var exists = this.pixKeyRepository().existsByValue(aValue);
 
         Assertions.assertTrue(exists);
+    }
+
+    @Test
+    @Sql(statements = {
+            "INSERT INTO pix_keys (id, type, key_value, account_id, status, created_at, updated_at, deleted_at, version) " +
+                    "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', 'INVALID', '12431241241', '01KGB053FZJ0PC00HD9QZWAJ0H', 'ACTIVE', NOW(), NOW(), NULL, 1)"
+    })
+    void givenAnInvalidPixKeyTypeInDB_whenCalls_thenShouldReturnIt() {
+        Assertions.assertEquals(1, countPixKeys());
+
+        final var expectedErrorMessage = "PixKeyType INVALID not found";
+
+        final var aException = Assertions.assertThrows(NotFoundException.class,
+                () -> this.pixKeyRepository().pixKeyOfActiveByValue("12431241241"));
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
     }
 }
