@@ -13,6 +13,7 @@ import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.transactions.Transaction;
+import com.payment.system.domain.transactions.TransactionType;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.math.BigDecimal;
@@ -79,6 +80,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                     aToAccount.getId(),
                     aPixKey.getId(),
                     new Money(input.amount()),
+                    TransactionType.TRANSFER,
                     input.idempotencyKey()
             );
 
