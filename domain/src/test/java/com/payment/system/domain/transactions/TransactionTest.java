@@ -149,4 +149,27 @@ class TransactionTest extends UnitTest {
 
         Assertions.assertTrue(type.isEmpty());
     }
+
+    @Test
+    void givenAValidTransaction_whenCallsFail_thenReturnUpdatedTransaction() {
+        final var aFromAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aToAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var aAmount = new Money(new BigDecimal("150.00"));
+        final var aType = TransactionType.TRANSFER;
+        final var anIdempotencyKey = "unique-key-123";
+
+        final var aTransaction = Transaction.newTransaction(
+                aFromAccountId,
+                aToAccountId,
+                aPixKeyId,
+                aAmount,
+                aType,
+                anIdempotencyKey
+        );
+
+        aTransaction.fail("Error on process transaction");
+
+        Assertions.assertEquals(TransactionStatus.FAILED, aTransaction.getStatus());
+    }
 }
