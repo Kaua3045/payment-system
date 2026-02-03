@@ -15,10 +15,10 @@ Um sistema estilo banco, para processamento de pagamentos, com criação de cont
   - Decidi fazer esse projeto para aprender mais sobre clean architecture, DDD e SOLID. Além de aprender mais sobre o Spring e o Java. Deploys com k8s, docker e argoCD.
 
 - Quais foram os desafios de implementá-lo?
-  - Foi um desafio muito grande implementar toda a parte de CD, com k8s, docker e argoCD, além disso o projeto é muito complexo, são muitas regras de negócio e validações, o que torna o projeto muito interessante.
+  - ...
 
 - O que eu aprendi com ele?
-  - Aprendi como implementar CD com k8s, docker e argoCD. Além disso aprendi muito sobre tipos de deploy, como configurar um projeto, toda a parte de segurança e boas práticas.
+  - ...
 
 ## Tabela de conteúdos
 
