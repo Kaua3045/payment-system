@@ -20,6 +20,7 @@ import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -113,6 +114,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
     @Test
     void givenExistingIdempotencyKey_whenExecute_shouldThrowDomainException() {
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
         Mockito.when(transactionRepository.existsByIdempotencyKey(any()))
                 .thenReturn(true);
 
@@ -328,5 +331,59 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         final var aException = Assertions.assertThrows(NotFoundException.class, () -> useCase.execute(command));
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void givenErrorAfterTransactionCreation_whenExecute_shouldMarkTransactionAsFailed() {
+        final var fromAccount = Account.newAccount("user-1234");
+        fromAccount.credit(BigDecimal.ONE);
+
+        final var toAccount = Account.newAccount("user-5678");
+
+        final var pixKey = PixKey.newPixKey(
+                new PixKeyValueFactory().create(PixKeyType.RANDOM, IdentifierUtils.generateNewId()),
+                toAccount.getId()
+        );
+
+        final var idempotencyKey = "idem-fail";
+
+        final var expectedErrorMessage = "Insufficient funds";
+
+        final var transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(transactionRepository.existsByIdempotencyKey(idempotencyKey))
+                .thenReturn(false);
+
+        Mockito.when(accountRepository.accountOfId(fromAccount.getId().value().toString()))
+                .thenReturn(Optional.of(fromAccount));
+
+        Mockito.when(pixKeyRepository.pixKeyOfActiveByValue(any()))
+                .thenReturn(Optional.of(pixKey));
+
+        Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
+                .thenReturn(Optional.of(toAccount));
+
+        Mockito.when(transactionRepository.save(transactionCaptor.capture()))
+                .thenAnswer(returnsFirstArg());
+
+        Mockito.when(transactionRepository.transactionOfIdempotencyKey(idempotencyKey))
+                .thenAnswer(inv -> Optional.of(transactionCaptor.getValue()));
+
+        final var command = CreateTransactionCommand.with(
+                fromAccount.getId().value().toString(),
+                pixKey.getKey().value(),
+                pixKey.getKey().type().name(),
+                BigDecimal.TEN,
+                idempotencyKey
+        );
+
+        final var aException = Assertions.assertThrows(DomainException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.atLeast(2)).save(any(Transaction.class));
     }
 }
