@@ -1,9 +1,18 @@
 package com.payment.system.infrastructure.transactions;
 
 import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.transactions.Transaction;
+import com.payment.system.domain.transactions.TransactionId;
+import com.payment.system.domain.transactions.TransactionStatus;
+import com.payment.system.domain.transactions.TransactionType;
+import com.payment.system.domain.utils.ULID;
+import com.payment.system.domain.valueobjects.Money;
 import com.payment.system.infrastructure.exceptions.ConflictException;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
+import com.payment.system.infrastructure.jdbc.JdbcUtils;
+import com.payment.system.infrastructure.jdbc.RowMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -13,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Component
 public class TransactionJdbcRepository implements TransactionRepository {
@@ -46,6 +56,12 @@ public class TransactionJdbcRepository implements TransactionRepository {
     public boolean existsByIdempotencyKey(final String idempotencyKey) {
         final var aSql = "SELECT COUNT(*) FROM transactions WHERE idempotency_key = :idempotencyKey";
         return this.databaseClient.count(aSql, Map.of("idempotencyKey", idempotencyKey)) > 0;
+    }
+
+    @Override
+    public Optional<Transaction> transactionOfIdempotencyKey(final String idempotencyKey) {
+        final var aSql = "SELECT * FROM transactions WHERE idempotency_key = :idempotencyKey";
+        return this.databaseClient.queryOne(aSql, Map.of("idempotencyKey", idempotencyKey), transactionMapper());
     }
 
     private void create(final Transaction transaction) {
@@ -86,5 +102,22 @@ public class TransactionJdbcRepository implements TransactionRepository {
         aParams.put("version", aTransaction.getVersion());
 
         return this.databaseClient.update(aSql, aParams);
+    }
+
+    private RowMap<Transaction> transactionMapper() {
+        return rs -> Transaction.with(
+                new TransactionId(ULID.fromString(rs.getString("id"))),
+                rs.getLong("version"),
+                new AccountId(ULID.fromString(rs.getString("from_account_id"))),
+                new AccountId(ULID.fromString(rs.getString("to_account_id"))),
+                new PixKeyId(ULID.fromString(rs.getString("pix_key_id"))),
+                new Money(rs.getBigDecimal("amount")),
+                TransactionStatus.from(rs.getString("status")).orElse(null),
+                TransactionType.from(rs.getString("type")).orElse(null),
+                rs.getString("idempotency_key"),
+                rs.getString("failure_reason"),
+                JdbcUtils.getInstant(rs, "created_at"),
+                JdbcUtils.getInstant(rs, "updated_at")
+        );
     }
 }
