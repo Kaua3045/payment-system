@@ -112,6 +112,12 @@ public class Transaction extends AggregateRoot<TransactionId> {
         this.setUpdatedAt(InstantUtils.now());
     }
 
+    public void fail(final String aFailureReason) {
+        this.setStatus(TransactionStatus.FAILED);
+        this.setFailureReason(aFailureReason);
+        this.setUpdatedAt(InstantUtils.now());
+    }
+
     public AccountId getFromAccountId() {
         return fromAccountId;
     }
