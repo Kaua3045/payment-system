@@ -103,4 +103,4 @@ volumes:
 
 networks:
   observability:
-    name: observability
+    external: true
