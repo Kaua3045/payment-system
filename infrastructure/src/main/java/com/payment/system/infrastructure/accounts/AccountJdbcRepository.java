@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -83,9 +85,15 @@ public class AccountJdbcRepository implements AccountRepository {
         aParams.put("userId", anAccount.getUserId());
         aParams.put("balance", anAccount.getBalance().amount());
         aParams.put("status", anAccount.getStatus().name());
-        aParams.put("createdAt", anAccount.getCreatedAt());
-        aParams.put("updatedAt", anAccount.getUpdatedAt());
-        aParams.put("closedAt", anAccount.getClosedAt().orElse(null));
+        aParams.put("createdAt",
+                OffsetDateTime.ofInstant(anAccount.getCreatedAt(), ZoneOffset.UTC));
+        aParams.put("updatedAt",
+                OffsetDateTime.ofInstant(anAccount.getUpdatedAt(), ZoneOffset.UTC));
+        aParams.put("closedAt",
+                anAccount.getClosedAt()
+                        .map(i -> OffsetDateTime.ofInstant(i, ZoneOffset.UTC))
+                        .orElse(null));
+
         aParams.put("version", anAccount.getVersion());
 
         return this.databaseClient.update(aSql, aParams);
