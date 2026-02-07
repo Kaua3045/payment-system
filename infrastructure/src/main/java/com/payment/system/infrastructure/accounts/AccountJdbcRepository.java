@@ -53,7 +53,7 @@ public class AccountJdbcRepository implements AccountRepository {
 
     @Override
     public Optional<Account> accountOfId(final String anId) {
-        final var aSql = "SELECT * FROM accounts WHERE id = :id";
+        final var aSql = "SELECT * FROM accounts WHERE id = :id FOR UPDATE";
         return this.databaseClient.queryOne(aSql, Map.of("id", anId), accountMapper());
     }
 
