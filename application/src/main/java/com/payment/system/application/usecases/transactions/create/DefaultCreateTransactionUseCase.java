@@ -46,10 +46,6 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
         try {
             return this.transactionManager.execute(() -> {
-                if (this.transactionRepository.existsByIdempotencyKey(input.idempotencyKey())) {
-                    throw DomainException.with("Transaction with idempotencyKey %s already exists".formatted(input.idempotencyKey()));
-                }
-
                 if (input.amount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw DomainException.with("Amount must be greater than zero");
                 }
@@ -98,7 +94,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
                 return CreateTransactionOutput.from(aTransaction);
             });
-        } catch (final Exception ex) {
+        } catch (final DomainException ex) {
             this.transactionManager.execute(() -> {
                 this.transactionRepository.transactionOfIdempotencyKey(input.idempotencyKey())
                         .ifPresent(tx -> {
@@ -107,7 +103,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         });
                 return null;
             });
-           throw ex;
+            throw ex;
         }
     }
 }
