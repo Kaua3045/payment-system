@@ -72,7 +72,14 @@ public class TransactionJdbcRepository implements TransactionRepository {
                 VALUES (:id, :fromAccountId, :toAccountId, :pixKeyId, :amount, :status, :type, :idempotencyKey, :failureReason, :createdAt, :updatedAt, (:version +1))
                 """;
 
-        executeUpdate(aSql, transaction);
+        try {
+            executeUpdate(aSql, transaction);
+        } catch (Exception ex) {
+            throw ConflictException.with(
+                    "Transaction with idempotencyKey %s already exists"
+                            .formatted(transaction.getIdempotencyKey())
+            );
+        }
     }
 
     private void update(final Transaction transaction) {
