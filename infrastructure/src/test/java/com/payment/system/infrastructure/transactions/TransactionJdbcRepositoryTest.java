@@ -85,7 +85,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
-    void givenAValidNotExistsIdempotencyKey_whenCallsExistsByIdempotencyKey_thenShouldReturnFalse() {
+    void givenAValidNotExistsIdempotencyKey_whenCallsExistsByIdempotencyKey_thenShouldReturnTrue() {
         Assertions.assertEquals(0, countTransactions());
 
         final var aTransaction = Transaction.newTransaction(
