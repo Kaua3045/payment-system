@@ -88,6 +88,28 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
     void givenAValidNotExistsIdempotencyKey_whenCallsExistsByIdempotencyKey_thenShouldReturnFalse() {
         Assertions.assertEquals(0, countTransactions());
 
+        final var aTransaction = Transaction.newTransaction(
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
+                "1238712712678368126834"
+        );
+
+        this.transactionRepository().save(aTransaction);
+
+        final var aIdempotencyKey = aTransaction.getIdempotencyKey();
+
+        final var aExists = this.transactionRepository().existsByIdempotencyKey(aIdempotencyKey);
+
+        Assertions.assertTrue(aExists);
+    }
+
+    @Test
+    void givenAValidExistsIdempotencyKey_whenCallsExistsByIdempotencyKey_thenShouldReturnFalse() {
+        Assertions.assertEquals(0, countTransactions());
+
         final var aIdempotencyKey = "1281372178316872";
 
         final var aExists = this.transactionRepository().existsByIdempotencyKey(aIdempotencyKey);
