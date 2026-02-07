@@ -19,6 +19,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -97,8 +99,10 @@ public class TransactionJdbcRepository implements TransactionRepository {
         aParams.put("type", aTransaction.getType().name());
         aParams.put("idempotencyKey", aTransaction.getIdempotencyKey());
         aParams.put("failureReason", aTransaction.getFailureReason().orElse(null));
-        aParams.put("createdAt", aTransaction.getCreatedAt());
-        aParams.put("updatedAt", aTransaction.getUpdatedAt());
+        aParams.put("createdAt",
+                OffsetDateTime.ofInstant(aTransaction.getCreatedAt(), ZoneOffset.UTC));
+        aParams.put("updatedAt",
+                OffsetDateTime.ofInstant(aTransaction.getUpdatedAt(), ZoneOffset.UTC));
         aParams.put("version", aTransaction.getVersion());
 
         return this.databaseClient.update(aSql, aParams);

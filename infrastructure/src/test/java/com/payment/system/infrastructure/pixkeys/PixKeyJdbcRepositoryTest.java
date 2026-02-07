@@ -63,11 +63,22 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
+    void givenAnNotExistingPixKeyValue_whenCallsExistsByValue_thenShouldReturnFalse() {
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var aValue = "7126783186723678";
+
+        final var exists = this.pixKeyRepository().existsByValue(aValue);
+
+        Assertions.assertFalse(exists);
+    }
+
+    @Test
     @Sql(statements = {
             "INSERT INTO pix_keys (id, type, key_value, account_id, status, created_at, updated_at, deleted_at, version) " +
                     "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', 'INVALID', '12431241241', '01KGB053FZJ0PC00HD9QZWAJ0H', 'ACTIVE', NOW(), NOW(), NULL, 1)"
     })
-    void givenAnInvalidPixKeyTypeInDB_whenCalls_thenShouldReturnIt() {
+    void givenAnInvalidPixKeyTypeInDB_whenCallsPixKeyOfActiveByValue_thenShouldReturnIt() {
         Assertions.assertEquals(1, countPixKeys());
 
         final var expectedErrorMessage = "PixKeyType INVALID not found";
@@ -76,5 +87,40 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
                 () -> this.pixKeyRepository().pixKeyOfActiveByValue("12431241241"));
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void givenAValidValue_whenCallsPixKeyOfActiveByValue_thenShouldReturnPixKey() {
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aType = "RANDOM";
+        final var aValue = IdentifierUtils.generateNewId();
+
+        final var aPixKey = PixKey.newPixKey(new PixKeyValueFactory().create(PixKeyType.from(aType).get(), aValue), aAccountId);
+        this.pixKeyRepository().save(aPixKey);
+
+        Assertions.assertEquals(1, countPixKeys());
+
+        final var aSavedPixKey = this.pixKeyRepository().pixKeyOfActiveByValue(aPixKey.getKey().value()).get();
+
+        Assertions.assertEquals(aPixKey.getId(), aSavedPixKey.getId());
+        Assertions.assertEquals(1, aSavedPixKey.getVersion());
+        Assertions.assertEquals(aType, aSavedPixKey.getKey().type().name());
+        Assertions.assertEquals(aValue, aSavedPixKey.getKey().value());
+        Assertions.assertEquals(aAccountId, aSavedPixKey.getAccountId());
+        Assertions.assertEquals(aPixKey.getStatus(), aSavedPixKey.getStatus());
+        Assertions.assertEquals(aPixKey.getCreatedAt(), aSavedPixKey.getCreatedAt());
+        Assertions.assertEquals(aPixKey.getUpdatedAt(), aSavedPixKey.getUpdatedAt());
+        Assertions.assertTrue(aSavedPixKey.getDeletedAt().isEmpty());
+    }
+
+    @Test
+    void givenAnInvalidValue_whenCallsPixKeyOfActiveByValue_thenShouldReturnEmpty() {
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var aSavedPixKey = this.pixKeyRepository().pixKeyOfActiveByValue("7912378816823681");
+
+        Assertions.assertTrue(aSavedPixKey.isEmpty());
     }
 }

@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -72,9 +74,14 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
         aParams.put("value", aPixKey.getKey().value());
         aParams.put("accountId", aPixKey.getAccountId().value().toString());
         aParams.put("status", aPixKey.getStatus().name());
-        aParams.put("createdAt", aPixKey.getCreatedAt());
-        aParams.put("updatedAt", aPixKey.getUpdatedAt());
-        aParams.put("deletedAt", aPixKey.getDeletedAt().orElse(null));
+        aParams.put("createdAt",
+                OffsetDateTime.ofInstant(aPixKey.getCreatedAt(), ZoneOffset.UTC));
+        aParams.put("updatedAt",
+                OffsetDateTime.ofInstant(aPixKey.getUpdatedAt(), ZoneOffset.UTC));
+        aParams.put("deletedAt",
+                aPixKey.getDeletedAt()
+                        .map(i -> OffsetDateTime.ofInstant(i, ZoneOffset.UTC))
+                        .orElse(null));
 
         return this.databaseClient.update(aSql, aParams);
     }
