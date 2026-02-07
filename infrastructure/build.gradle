@@ -71,6 +71,7 @@ dependencies {
 
     testImplementation 'org.testcontainers:testcontainers:2.0.2'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.2'
+    testImplementation 'org.testcontainers:postgresql'
 }
 
 flyway { // Flyway configuration change this to match your database
