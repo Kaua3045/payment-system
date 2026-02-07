@@ -65,9 +65,6 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
-        Mockito.when(transactionRepository.existsByIdempotencyKey(idempotencyKey))
-                .thenReturn(false);
-
         Mockito.when(accountRepository.accountOfId(fromAccount.getId().value().toString()))
                 .thenReturn(Optional.of(fromAccount));
 
@@ -92,7 +89,6 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
         Assertions.assertNotNull(output);
 
-        Mockito.verify(transactionRepository, Mockito.times(1)).existsByIdempotencyKey(any());
         Mockito.verify(accountRepository, Mockito.times(2)).accountOfId(any());
         Mockito.verify(pixKeyRepository, Mockito.times(1)).pixKeyOfActiveByValue(any());
         Mockito.verify(transactionRepository, Mockito.times(2)).save(any());
@@ -110,31 +106,6 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
 
         Mockito.verifyNoInteractions(transactionRepository);
-    }
-
-    @Test
-    void givenExistingIdempotencyKey_whenExecute_shouldThrowDomainException() {
-        Mockito.when(transactionManager.execute(any()))
-                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
-        Mockito.when(transactionRepository.existsByIdempotencyKey(any()))
-                .thenReturn(true);
-
-        final var expectedErrorMessage = "Transaction with idempotencyKey idem already exists";
-
-        final var command = CreateTransactionCommand.with(
-                "acc",
-                "pix",
-                "random",
-                BigDecimal.TEN,
-                "idem"
-        );
-
-        final var aException = Assertions.assertThrows(
-                DomainException.class,
-                () -> useCase.execute(command)
-        );
-
-        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
     }
 
     @Test
@@ -353,9 +324,6 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
-
-        Mockito.when(transactionRepository.existsByIdempotencyKey(idempotencyKey))
-                .thenReturn(false);
 
         Mockito.when(accountRepository.accountOfId(fromAccount.getId().value().toString()))
                 .thenReturn(Optional.of(fromAccount));
