@@ -5,6 +5,8 @@ import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
 import com.payment.system.application.usecases.transactions.create.DefaultCreateTransactionUseCase;
+import com.payment.system.application.usecases.transactions.deposit.CreateDepositUseCase;
+import com.payment.system.application.usecases.transactions.deposit.DefaultCreateDepositUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.DefaultGetTransactionByIdUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.application.wrapper.TransactionManager;
@@ -35,6 +37,21 @@ public class TransactionUseCaseConfig {
     ) {
         return new DefaultGetTransactionByIdUseCase(
                 transactionRepository
+        );
+    }
+
+    @Bean
+    public CreateDepositUseCase createDepositUseCase(
+            final AccountRepository accountRepository,
+            final PixKeyRepository pixKeyRepository,
+            final TransactionRepository transactionRepository,
+            final TransactionManager transactionManager
+    ) {
+        return new DefaultCreateDepositUseCase(
+                accountRepository,
+                pixKeyRepository,
+                transactionRepository,
+                transactionManager
         );
     }
 }
