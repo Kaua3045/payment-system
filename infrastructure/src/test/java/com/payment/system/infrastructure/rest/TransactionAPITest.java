@@ -9,6 +9,7 @@ import com.payment.system.application.usecases.transactions.retrieve.id.GetTrans
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.pixkeys.PixKeyId;
+import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionStatus;
 import com.payment.system.domain.transactions.TransactionType;
@@ -111,6 +112,7 @@ class TransactionAPITest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
