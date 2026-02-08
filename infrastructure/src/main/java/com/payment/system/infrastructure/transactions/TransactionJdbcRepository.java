@@ -3,10 +3,7 @@ package com.payment.system.infrastructure.transactions;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.pixkeys.PixKeyId;
-import com.payment.system.domain.transactions.Transaction;
-import com.payment.system.domain.transactions.TransactionId;
-import com.payment.system.domain.transactions.TransactionStatus;
-import com.payment.system.domain.transactions.TransactionType;
+import com.payment.system.domain.transactions.*;
 import com.payment.system.domain.utils.ULID;
 import com.payment.system.domain.valueobjects.Money;
 import com.payment.system.infrastructure.exceptions.ConflictException;
@@ -74,8 +71,8 @@ public class TransactionJdbcRepository implements TransactionRepository {
 
     private void create(final Transaction transaction) {
         final var aSql = """
-                INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, idempotency_key, failure_reason, created_at, updated_at, version)
-                VALUES (:id, :fromAccountId, :toAccountId, :pixKeyId, :amount, :status, :type, :idempotencyKey, :failureReason, :createdAt, :updatedAt, (:version +1))
+                INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, source, idempotency_key, failure_reason, created_at, updated_at, version)
+                VALUES (:id, :fromAccountId, :toAccountId, :pixKeyId, :amount, :status, :type, :source, :idempotencyKey, :failureReason, :createdAt, :updatedAt, (:version +1))
                 """;
 
         try {
@@ -110,6 +107,7 @@ public class TransactionJdbcRepository implements TransactionRepository {
         aParams.put("amount", aTransaction.getAmount().amount());
         aParams.put("status", aTransaction.getStatus().name());
         aParams.put("type", aTransaction.getType().name());
+        aParams.put("source", aTransaction.getSource().name());
         aParams.put("idempotencyKey", aTransaction.getIdempotencyKey());
         aParams.put("failureReason", aTransaction.getFailureReason().orElse(null));
         aParams.put("createdAt",
@@ -131,6 +129,7 @@ public class TransactionJdbcRepository implements TransactionRepository {
                 new Money(rs.getBigDecimal("amount")),
                 TransactionStatus.from(rs.getString("status")).orElse(null),
                 TransactionType.from(rs.getString("type")).orElse(null),
+                DepositSource.from(rs.getString("source")).orElse(null),
                 rs.getString("idempotency_key"),
                 rs.getString("failure_reason"),
                 JdbcUtils.getInstant(rs, "created_at"),

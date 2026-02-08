@@ -7,6 +7,7 @@ CREATE TABLE transactions (
     amount NUMERIC(10, 2) NOT NULL,
     status VARCHAR(15) NOT NULL,
     type VARCHAR(15) NOT NULL,
+    source VARCHAR(30) NOT NULL,
     idempotency_key VARCHAR(255) NOT NULL UNIQUE,
     failure_reason VARCHAR(255) NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
