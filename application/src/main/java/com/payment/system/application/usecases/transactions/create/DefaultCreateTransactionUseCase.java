@@ -12,6 +12,7 @@ import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.pixkeys.PixKeyValueFactory;
+import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionType;
 import com.payment.system.domain.valueobjects.Money;
@@ -78,6 +79,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         aPixKey.getId(),
                         new Money(input.amount()),
                         TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
                         input.idempotencyKey()
                 );
 
