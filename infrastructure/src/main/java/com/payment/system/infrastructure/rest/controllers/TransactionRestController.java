@@ -2,11 +2,15 @@ package com.payment.system.infrastructure.rest.controllers;
 
 import com.payment.system.application.usecases.transactions.create.CreateTransactionCommand;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
+import com.payment.system.application.usecases.transactions.deposit.CreateDepositCommand;
+import com.payment.system.application.usecases.transactions.deposit.CreateDepositUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdCommand;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import com.payment.system.infrastructure.rest.TransactionAPI;
+import com.payment.system.infrastructure.transactions.req.CreateDepositRequest;
 import com.payment.system.infrastructure.transactions.req.CreateTransactionRequest;
+import com.payment.system.infrastructure.transactions.res.CreateDepositResponse;
 import com.payment.system.infrastructure.transactions.res.CreateTransactionResponse;
 import com.payment.system.infrastructure.transactions.res.GetTransactionByIdResponse;
 import org.slf4j.Logger;
@@ -24,13 +28,16 @@ public class TransactionRestController implements TransactionAPI {
 
     private final CreateTransactionUseCase createTransactionUseCase;
     private final GetTransactionByIdUseCase getTransactionByIdUseCase;
+    private final CreateDepositUseCase createDepositUseCase;
 
     public TransactionRestController(
             final CreateTransactionUseCase createTransactionUseCase,
-            final GetTransactionByIdUseCase getTransactionByIdUseCase
+            final GetTransactionByIdUseCase getTransactionByIdUseCase,
+            final CreateDepositUseCase createDepositUseCase
     ) {
         this.createTransactionUseCase = Objects.requireNonNull(createTransactionUseCase);
         this.getTransactionByIdUseCase = Objects.requireNonNull(getTransactionByIdUseCase);
+        this.createDepositUseCase = Objects.requireNonNull(createDepositUseCase);
     }
 
     @IdempotencyKey
@@ -51,6 +58,26 @@ public class TransactionRestController implements TransactionAPI {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CreateTransactionResponse.from(aOutput));
+    }
+
+    @IdempotencyKey
+    @Override
+    public ResponseEntity<CreateDepositResponse> createDeposit(final String idempotencyKey, final CreateDepositRequest request) {
+        log.info("Received create deposit request: {}", request);
+
+        final var aCommand = CreateDepositCommand.with(
+                request.pixKey(),
+                request.pixKeyType(),
+                request.source(),
+                request.amount(),
+                idempotencyKey
+        );
+
+        final var aOutput = this.createDepositUseCase.execute(aCommand);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(CreateDepositResponse.from(aOutput));
     }
 
     @Override
