@@ -21,6 +21,7 @@ class TransactionTest extends UnitTest {
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var aType = TransactionType.TRANSFER;
+        final var aSource = DepositSource.ATM;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -29,6 +30,7 @@ class TransactionTest extends UnitTest {
                 aPixKeyId,
                 aAmount,
                 aType,
+                aSource,
                 anIdempotencyKey
         );
 
@@ -39,6 +41,7 @@ class TransactionTest extends UnitTest {
         Assertions.assertEquals(aAmount, aTransaction.getAmount());
         Assertions.assertEquals(TransactionStatus.PENDING, aTransaction.getStatus());
         Assertions.assertEquals(aType, aTransaction.getType());
+        Assertions.assertEquals(aSource, aTransaction.getSource());
         Assertions.assertEquals(anIdempotencyKey, aTransaction.getIdempotencyKey());
         Assertions.assertNotNull(aTransaction.getCreatedAt());
         Assertions.assertNotNull(aTransaction.getUpdatedAt());
@@ -56,6 +59,7 @@ class TransactionTest extends UnitTest {
         final var anIdempotencyKey = "unique-key-123";
         final var aStatus = TransactionStatus.PENDING;
         final var aType = TransactionType.TRANSFER;
+        final var aSource = DepositSource.CASH;
         final var aNow = InstantUtils.now();
 
         final var aTransaction = Transaction.with(
@@ -67,6 +71,7 @@ class TransactionTest extends UnitTest {
                 aAmount,
                 aStatus,
                 aType,
+                aSource,
                 anIdempotencyKey,
                 null,
                 aNow,
@@ -81,6 +86,7 @@ class TransactionTest extends UnitTest {
         Assertions.assertEquals(aAmount, aTransaction.getAmount());
         Assertions.assertEquals(aStatus, aTransaction.getStatus());
         Assertions.assertEquals(aType, aTransaction.getType());
+        Assertions.assertEquals(aSource, aTransaction.getSource());
         Assertions.assertEquals(anIdempotencyKey, aTransaction.getIdempotencyKey());
         Assertions.assertEquals(aNow, aTransaction.getCreatedAt());
         Assertions.assertEquals(aNow, aTransaction.getUpdatedAt());
@@ -104,6 +110,7 @@ class TransactionTest extends UnitTest {
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var aType = TransactionType.TRANSFER;
+        final var aSource = DepositSource.CASH;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -112,6 +119,7 @@ class TransactionTest extends UnitTest {
                 aPixKeyId,
                 aAmount,
                 aType,
+                aSource,
                 anIdempotencyKey
         );
 
@@ -125,6 +133,7 @@ class TransactionTest extends UnitTest {
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var aType = TransactionType.TRANSFER;
+        final var aSource = DepositSource.CASH;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -133,6 +142,7 @@ class TransactionTest extends UnitTest {
                 aPixKeyId,
                 aAmount,
                 aType,
+                aSource,
                 anIdempotencyKey
         );
 
@@ -157,6 +167,7 @@ class TransactionTest extends UnitTest {
         final var aPixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var aAmount = new Money(new BigDecimal("150.00"));
         final var aType = TransactionType.TRANSFER;
+        final var aSource = DepositSource.CASH;
         final var anIdempotencyKey = "unique-key-123";
 
         final var aTransaction = Transaction.newTransaction(
@@ -165,11 +176,21 @@ class TransactionTest extends UnitTest {
                 aPixKeyId,
                 aAmount,
                 aType,
+                aSource,
                 anIdempotencyKey
         );
 
         aTransaction.fail("Error on process transaction");
 
         Assertions.assertEquals(TransactionStatus.FAILED, aTransaction.getStatus());
+    }
+
+    @Test
+    void givenAnInvalidDepositSourceName_whenCallsDepositSourceFrom_thenReturnEmpty() {
+        final var invalidDepositSourceName = "INVALID_Source";
+
+        final var source = DepositSource.from(invalidDepositSourceName);
+
+        Assertions.assertTrue(source.isEmpty());
     }
 }
