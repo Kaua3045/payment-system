@@ -52,6 +52,38 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
+    void givenAnInvalidNewTransactionWithExistIdempotencyKey_whenCallsSave_thenShouldThrows() {
+        Assertions.assertEquals(0, countTransactions());
+
+        final var expectedErrorMessage = "Transaction with idempotencyKey 1238712712678368126834 already exists";
+
+        final var aTransaction = Transaction.newTransaction(
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
+                "1238712712678368126834"
+        );
+
+        this.transactionRepository().save(aTransaction);
+
+        final var aException = Assertions.assertThrows(ConflictException.class, () ->
+                this.transactionRepository().save(Transaction.newTransaction(
+                        aTransaction.getFromAccountId(),
+                        aTransaction.getToAccountId(),
+                        aTransaction.getPixKeyId(),
+                        aTransaction.getAmount(),
+                        aTransaction.getType(),
+                        aTransaction.getIdempotencyKey()
+                )));
+
+        Assertions.assertEquals(1, countTransactions());
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
     void givenAValidUpdatedTransaction_whenCallsSave_thenShouldUpdateIt() {
         Assertions.assertEquals(0, countTransactions());
 

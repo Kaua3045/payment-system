@@ -1,0 +1,10 @@
+redis:
+  host: ${redis.hosts:localhost}
+  port: ${redis.ports:6390}
+
+spring:
+  jpa:
+    show-sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
