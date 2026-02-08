@@ -248,4 +248,63 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
         Assertions.assertEquals(expectedErrorMessage, aException.getErrors().getFirst().message());
         Assertions.assertEquals(expectedErrorProperty, aException.getErrors().getFirst().property());
     }
+
+    @Test
+    void givenAValidIds_whenCallsTransactionOfIdAndAccountId_thenReturnTransaction() {
+        Assertions.assertEquals(0, countTransactions());
+
+        final var aTransaction = Transaction.newTransaction(
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
+                "1238712712678368126834"
+        );
+
+        this.transactionRepository().save(aTransaction);
+
+        Assertions.assertEquals(1, countTransactions());
+
+        final var aSavedTransaction = this.transactionRepository().transactionOfIdAndAccountId(
+                aTransaction.getId().value().toString(),
+                aTransaction.getFromAccountId().value().toString()
+        ).get();
+
+        Assertions.assertEquals(aTransaction.getId(), aSavedTransaction.getId());
+        Assertions.assertEquals(aTransaction.getFromAccountId(), aSavedTransaction.getFromAccountId());
+        Assertions.assertEquals(aTransaction.getToAccountId(), aSavedTransaction.getToAccountId());
+        Assertions.assertEquals(aTransaction.getPixKeyId(), aSavedTransaction.getPixKeyId());
+        Assertions.assertEquals(aTransaction.getStatus(), aSavedTransaction.getStatus());
+        Assertions.assertEquals(aTransaction.getType(), aSavedTransaction.getType());
+        Assertions.assertEquals(aTransaction.getIdempotencyKey(), aSavedTransaction.getIdempotencyKey());
+        Assertions.assertEquals(aTransaction.getCreatedAt(), aSavedTransaction.getCreatedAt());
+        Assertions.assertEquals(aTransaction.getUpdatedAt(), aSavedTransaction.getUpdatedAt());
+        Assertions.assertTrue(aSavedTransaction.getFailureReason().isEmpty());
+    }
+
+    @Test
+    void givenAnInvalidAccountId_whenCallsTransactionOfIdAndAccountId_thenReturnEmpty() {
+        Assertions.assertEquals(0, countTransactions());
+
+        final var aTransaction = Transaction.newTransaction(
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
+                "1238712712678368126834"
+        );
+
+        this.transactionRepository().save(aTransaction);
+
+        Assertions.assertEquals(1, countTransactions());
+
+        final var aSavedTransaction = this.transactionRepository().transactionOfIdAndAccountId(
+                aTransaction.getId().value().toString(),
+                "17923712683168"
+        );
+
+        Assertions.assertTrue(aSavedTransaction.isEmpty());
+    }
 }
