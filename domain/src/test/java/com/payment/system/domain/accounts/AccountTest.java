@@ -2,7 +2,6 @@ package com.payment.system.domain.accounts;
 
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.exceptions.DomainException;
-import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.handler.NotificationHandler;
@@ -133,5 +132,13 @@ class AccountTest extends UnitTest {
                 () -> aAccount.debit(new BigDecimal("10.00")));
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void testCallAccountIdSystem() {
+        final var aAccountIdSystem = AccountId.system();
+
+        Assertions.assertTrue(aAccountIdSystem.isSystem());
+        Assertions.assertFalse(new AccountId(IdentifierUtils.generateNewMonotonicULID()).isSystem());
     }
 }
