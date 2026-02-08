@@ -11,4 +11,6 @@ public interface TransactionRepository {
     boolean existsByIdempotencyKey(String idempotencyKey);
 
     Optional<Transaction> transactionOfIdempotencyKey(String idempotencyKey);
+
+    Optional<Transaction> transactionOfIdAndAccountId(String transactionId, String accountId);
 }

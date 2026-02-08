@@ -3,16 +3,14 @@ package com.payment.system.infrastructure.rest;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import com.payment.system.infrastructure.transactions.req.CreateTransactionRequest;
 import com.payment.system.infrastructure.transactions.res.CreateTransactionResponse;
+import com.payment.system.infrastructure.transactions.res.GetTransactionByIdResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Transaction API", description = "Endpoints for managing Transaction")
 @RequestMapping("/v1/transactions")
@@ -30,4 +28,16 @@ public interface TransactionAPI {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     ResponseEntity<CreateTransactionResponse> createTransaction(@RequestHeader(IdempotencyKey.IDEMPOTENCY_KEY_HEADER) String idempotencyKey, @RequestBody CreateTransactionRequest request);
+
+    @GetMapping(
+            value = "/{accountId}/{transactionId}",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @Operation(summary = "Get transactions details by ID and authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Transaction details retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Transaction not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    ResponseEntity<GetTransactionByIdResponse> getTransactionByIdAndAuthenticatedUser(@PathVariable("accountId") String accountId, @PathVariable("transactionId") String transactionId);
 }

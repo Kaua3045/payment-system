@@ -5,9 +5,15 @@ import com.payment.system.ControllerTest;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionCommand;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionOutput;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdOutput;
+import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
+import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.pixkeys.PixKeyId;
+import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionStatus;
 import com.payment.system.domain.transactions.TransactionType;
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.valueobjects.Money;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -35,6 +41,9 @@ class TransactionAPITest {
 
     @MockitoBean
     private CreateTransactionUseCase createTransactionUseCase;
+
+    @MockitoBean
+    private GetTransactionByIdUseCase getTransactionByIdUseCase;
 
     @Captor
     private ArgumentCaptor<CreateTransactionCommand> createTransactionCommandCaptor;
@@ -92,5 +101,42 @@ class TransactionAPITest {
         Assertions.assertEquals(aPixKey, aCommandCaptured.pixKey());
         Assertions.assertEquals(aAmount, aCommandCaptured.amount());
         Assertions.assertEquals(aIdempotencyKey, aCommandCaptured.idempotencyKey());
+    }
+
+    @Test
+    void givenAValidIds_whenCallsGetTransactionByIdAndAuthenticatedUser_shouldReturnHttp200() throws Exception {
+        final var aTransaction = Transaction.newTransaction(
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(BigDecimal.TEN),
+                TransactionType.TRANSFER,
+                "1238712712678368126834"
+        );
+
+        Mockito.when(getTransactionByIdUseCase.execute(any()))
+                .thenReturn(GetTransactionByIdOutput.from(aTransaction));
+
+        final var aRequest = MockMvcRequestBuilders.get("/v1/transactions/{accountId}/{transactionId}",
+                        aTransaction.getFromAccountId().value().toString(), aTransaction.getId().value().toString())
+                .with(ApiTest.admin())
+                .accept(MediaType.APPLICATION_JSON_VALUE);
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transaction_id").value(aTransaction.getId().value().toString()))
+                .andExpect(jsonPath("$.from_account_id").value(aTransaction.getFromAccountId().value().toString()))
+                .andExpect(jsonPath("$.to_account_id").value(aTransaction.getToAccountId().value().toString()))
+                .andExpect(jsonPath("$.pix_key_id").value(aTransaction.getPixKeyId().value().toString()))
+                .andExpect(jsonPath("$.status").value(aTransaction.getStatus().name()))
+                .andExpect(jsonPath("$.type").value(aTransaction.getType().name()))
+                .andExpect(jsonPath("$.idempotency_key").value(aTransaction.getIdempotencyKey()))
+                .andExpect(jsonPath("$.created_at").value(aTransaction.getCreatedAt().toString()))
+                .andExpect(jsonPath("$.updated_at").value(aTransaction.getUpdatedAt().toString()));
+
+        Mockito.verify(getTransactionByIdUseCase, Mockito.times(1)).execute(any());
     }
 }

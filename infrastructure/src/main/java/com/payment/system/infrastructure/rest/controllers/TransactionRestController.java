@@ -2,10 +2,13 @@ package com.payment.system.infrastructure.rest.controllers;
 
 import com.payment.system.application.usecases.transactions.create.CreateTransactionCommand;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdCommand;
+import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import com.payment.system.infrastructure.rest.TransactionAPI;
 import com.payment.system.infrastructure.transactions.req.CreateTransactionRequest;
 import com.payment.system.infrastructure.transactions.res.CreateTransactionResponse;
+import com.payment.system.infrastructure.transactions.res.GetTransactionByIdResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,11 +23,14 @@ public class TransactionRestController implements TransactionAPI {
     private static final Logger log = LoggerFactory.getLogger(TransactionRestController.class);
 
     private final CreateTransactionUseCase createTransactionUseCase;
+    private final GetTransactionByIdUseCase getTransactionByIdUseCase;
 
     public TransactionRestController(
-            final CreateTransactionUseCase createTransactionUseCase
+            final CreateTransactionUseCase createTransactionUseCase,
+            final GetTransactionByIdUseCase getTransactionByIdUseCase
     ) {
         this.createTransactionUseCase = Objects.requireNonNull(createTransactionUseCase);
+        this.getTransactionByIdUseCase = Objects.requireNonNull(getTransactionByIdUseCase);
     }
 
     @IdempotencyKey
@@ -45,5 +51,16 @@ public class TransactionRestController implements TransactionAPI {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CreateTransactionResponse.from(aOutput));
+    }
+
+    @Override
+    public ResponseEntity<GetTransactionByIdResponse> getTransactionByIdAndAuthenticatedUser(final String accountId, final String transactionId) {
+        final var aCommand = GetTransactionByIdCommand.with(accountId, transactionId);
+
+        final var aOutput = this.getTransactionByIdUseCase.execute(aCommand);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(GetTransactionByIdResponse.from(aOutput));
     }
 }

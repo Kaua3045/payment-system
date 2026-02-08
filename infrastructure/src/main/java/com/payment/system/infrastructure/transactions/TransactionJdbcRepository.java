@@ -66,6 +66,12 @@ public class TransactionJdbcRepository implements TransactionRepository {
         return this.databaseClient.queryOne(aSql, Map.of("idempotencyKey", idempotencyKey), transactionMapper());
     }
 
+    @Override
+    public Optional<Transaction> transactionOfIdAndAccountId(final String transactionId, final String accountId) {
+        final var aSql = "SELECT * FROM transactions WHERE id = :transactionId AND (from_account_id = :accountId OR to_account_id = :accountId);";
+        return this.databaseClient.queryOne(aSql, Map.of("transactionId", transactionId, "accountId", accountId), transactionMapper());
+    }
+
     private void create(final Transaction transaction) {
         final var aSql = """
                 INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, idempotency_key, failure_reason, created_at, updated_at, version)
