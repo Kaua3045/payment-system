@@ -5,6 +5,8 @@ import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
 import com.payment.system.application.usecases.transactions.create.DefaultCreateTransactionUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.id.DefaultGetTransactionByIdUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.application.wrapper.TransactionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +26,15 @@ public class TransactionUseCaseConfig {
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager
+        );
+    }
+
+    @Bean
+    public GetTransactionByIdUseCase getTransactionByIdUseCase(
+            final TransactionRepository transactionRepository
+    ) {
+        return new DefaultGetTransactionByIdUseCase(
+                transactionRepository
         );
     }
 }
