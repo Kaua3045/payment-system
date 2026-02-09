@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class XSSRequestWrapper extends HttpServletRequestWrapper {
@@ -29,14 +30,22 @@ public class XSSRequestWrapper extends HttpServletRequestWrapper {
 
     @Override
     public Map<String, String[]> getParameterMap() {
-        Map<String, String[]> map = super.getParameterMap();
-        map.replaceAll((key, value) -> {
-            for (int i = 0; i < value.length; i++) {
-                value[i] = SanitizeUtils.sanitize(value[i]);
+        Map<String, String[]> originalMap = super.getParameterMap();
+
+        // Cria uma cópia mutável do mapa
+        Map<String, String[]> copy = new LinkedHashMap<>();
+
+        for (Map.Entry<String, String[]> entry : originalMap.entrySet()) {
+            String[] values = entry.getValue();
+            String[] sanitizedValues = new String[values.length];
+
+            for (int i = 0; i < values.length; i++) {
+                sanitizedValues[i] = SanitizeUtils.sanitize(values[i]);
             }
-            return value;
-        });
-        return map;
+            copy.put(entry.getKey(), sanitizedValues);
+        }
+
+        return copy;
     }
 
     @Override
