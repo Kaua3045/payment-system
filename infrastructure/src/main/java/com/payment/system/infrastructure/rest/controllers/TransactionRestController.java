@@ -82,7 +82,7 @@ public class TransactionRestController implements TransactionAPI {
 
     @Override
     public ResponseEntity<GetTransactionByIdResponse> getTransactionByIdAndAuthenticatedUser(final String accountId, final String transactionId) {
-        final var aCommand = GetTransactionByIdCommand.with(accountId, transactionId);
+        final var aCommand = GetTransactionByIdCommand.with(transactionId, accountId);
 
         final var aOutput = this.getTransactionByIdUseCase.execute(aCommand);
 
