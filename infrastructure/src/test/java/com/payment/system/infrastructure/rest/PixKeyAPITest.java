@@ -5,8 +5,14 @@ import com.payment.system.ControllerTest;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyCommand;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyOutput;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyUseCase;
+import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysOutput;
+import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysUseCase;
+import com.payment.system.domain.pagination.Pagination;
+import com.payment.system.domain.pagination.PaginationMetadata;
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
+import com.payment.system.infrastructure.pixkeys.res.ListPixKeysResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -18,6 +24,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,6 +39,9 @@ class PixKeyAPITest {
 
     @MockitoBean
     private CreatePixKeyUseCase createPixKeyUseCase;
+
+    @MockitoBean
+    private ListPixKeysUseCase listPixKeysUseCase;
 
     @Captor
     private ArgumentCaptor<CreatePixKeyCommand> createPixKeyCommandCaptor;
@@ -81,5 +92,71 @@ class PixKeyAPITest {
         Assertions.assertEquals(aAccountId, aCommandCaptured.accountId());
         Assertions.assertEquals(aType, aCommandCaptured.type());
         Assertions.assertEquals(aValue, aCommandCaptured.value());
+    }
+
+    @Test
+    void givenAValidValues_whenCallListPixKeys_thenReturnPixKeysPaginated() throws Exception {
+        final var aAccountId = IdentifierUtils.generateNewMonotonicULID().toString();
+
+        final var aPixKeyOne = new ListPixKeysOutput(
+                IdentifierUtils.generateNewMonotonicULID().toString(),
+                aAccountId,
+                "12345678900",
+                "CPF",
+                "ACTIVE",
+                InstantUtils.now(),
+                InstantUtils.now(),
+                null
+        );
+
+        final var aPixKeyTwo = new ListPixKeysOutput(
+                IdentifierUtils.generateNewMonotonicULID().toString(),
+                aAccountId,
+                "email@test.com",
+                "EMAIL",
+                "ACTIVE",
+                InstantUtils.now(),
+                InstantUtils.now(),
+                null
+        );
+
+        final var aPage = 0;
+        final var aPerPage = 2;
+        final var aItemsCount = 2;
+        final var aPagesCount = 1;
+
+        final var aMetadata =
+                new PaginationMetadata(aPage, aPerPage, aPagesCount, aItemsCount);
+
+        Mockito.when(listPixKeysUseCase.execute(any()))
+                .thenReturn(new Pagination<>(aMetadata, List.of(aPixKeyOne, aPixKeyTwo)));
+
+        final var aRequest = MockMvcRequestBuilders.get("/v1/pix-keys")
+                .with(ApiTest.admin())
+                .queryParam("accountId", aAccountId)
+                .queryParam("status", "ACTIVE")
+                .queryParam("page", String.valueOf(aPage))
+                .queryParam("perPage", String.valueOf(aPerPage))
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE);
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.metadata.current_page").value(aPage))
+                .andExpect(jsonPath("$.metadata.per_page").value(aPerPage))
+                .andExpect(jsonPath("$.metadata.total_pages").value(aPagesCount))
+                .andExpect(jsonPath("$.metadata.total_items").value(aItemsCount))
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items").isNotEmpty())
+                .andExpect(jsonPath("$.items[0].pix_key_id").value(aPixKeyOne.pixKeyId()))
+                .andExpect(jsonPath("$.items[0].account_id").value(aPixKeyOne.accountId()))
+                .andExpect(jsonPath("$.items[0].value").value(aPixKeyOne.value()))
+                .andExpect(jsonPath("$.items[0].type").value(aPixKeyOne.type()))
+                .andExpect(jsonPath("$.items[0].status").value(aPixKeyOne.status()));
+
+        Mockito.verify(listPixKeysUseCase, Mockito.times(1)).execute(any());
     }
 }
