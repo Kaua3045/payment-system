@@ -3,6 +3,9 @@ package com.payment.system.infrastructure.pixkeys;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.NotFoundException;
+import com.payment.system.domain.pagination.Pagination;
+import com.payment.system.domain.pagination.PaginationMetadata;
+import com.payment.system.domain.pagination.SearchQuery;
 import com.payment.system.domain.pixkeys.*;
 import com.payment.system.domain.utils.ULID;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
@@ -57,6 +60,96 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
         return this.databaseClient.queryOne(aSql, Map.of("value", value), pixKeyMapper());
     }
 
+    @Override
+    public Pagination<PixKey> listAll(final SearchQuery query) {
+        final var sql = new StringBuilder("""
+                    SELECT *
+                    FROM pix_keys
+                    WHERE deleted_at IS NULL
+                """);
+
+        final var countSql = new StringBuilder("""
+                    SELECT COUNT(*)
+                    FROM pix_keys
+                    WHERE deleted_at IS NULL
+                """);
+
+        final Map<String, Object> params = new HashMap<>();
+
+        // terms (textual search)
+        if (query.terms() != null && !query.terms().isBlank()) {
+            sql.append("""
+                        AND (
+                            key_value ILIKE :terms
+                            OR type ILIKE :terms
+                        )
+                    """);
+            countSql.append("""
+                        AND (
+                            key_value ILIKE :terms
+                            OR type ILIKE :terms
+                        )
+                    """);
+            params.put("terms", "%" + query.terms() + "%");
+        }
+
+        // dynamic filters
+        applyFilters(query.filters(), sql, countSql, params);
+
+        // period
+        query.getPeriod().ifPresent(period -> {
+            sql.append("""
+                        AND created_at BETWEEN :start AND :end
+                    """);
+            countSql.append("""
+                        AND created_at BETWEEN :start AND :end
+                    """);
+            params.put(
+                    "start",
+                    OffsetDateTime.ofInstant(period.start(), ZoneOffset.UTC)
+            );
+            params.put(
+                    "end",
+                    OffsetDateTime.ofInstant(period.end(), ZoneOffset.UTC)
+            );
+        });
+
+        // security order
+        sql.append(buildOrderBy(query));
+
+        // pagination
+        sql.append(" LIMIT :limit OFFSET :offset ");
+        params.put("limit", query.perPage());
+        params.put("offset", query.page() * query.perPage());
+
+        final var items = this.databaseClient.query(
+                sql.toString(),
+                params,
+                pixKeyMapper()
+        );
+
+        final var total = this.databaseClient.count(
+                countSql.toString(),
+                params
+        );
+
+        final var totalPages = (int) Math.ceil(
+                (double) total / query.perPage()
+        );
+
+        final var metadata = new PaginationMetadata(
+                query.page(),
+                query.perPage(),
+                totalPages,
+                total
+        );
+
+        return new Pagination<>(
+                metadata,
+                items
+        );
+    }
+
     private void create(final PixKey aPixKey) {
         final var aSql = """
                 INSERT INTO pix_keys (id, type, key_value, account_id, status, created_at, updated_at, deleted_at, version)
@@ -105,5 +198,47 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
                     JdbcUtils.getInstant(rs, "deleted_at")
             );
         };
+    }
+
+    private String buildOrderBy(final SearchQuery query) {
+        final var sort = switch (query.sort()) {
+            case "updatedAt" -> "updated_at";
+            case "status" -> "status";
+            default -> "created_at";
+        };
+
+        final var direction =
+                "desc".equalsIgnoreCase(query.direction())
+                        ? "DESC"
+                        : "ASC";
+
+        return " ORDER BY " + sort + " " + direction + " ";
+    }
+
+    private void applyFilters(
+            final Map<String, String> filters,
+            final StringBuilder sql,
+            final StringBuilder countSql,
+            final Map<String, Object> params
+    ) {
+        filters.forEach((key, value) -> {
+            switch (key) {
+                case "status" -> {
+                    sql.append(" AND status = :status ");
+                    countSql.append(" AND status = :status ");
+                    params.put("status", value);
+                }
+                case "accountId" -> {
+                    sql.append(" AND account_id = :accountId ");
+                    countSql.append(" AND account_id = :accountId ");
+                    params.put("accountId", value);
+                }
+                case "type" -> {
+                    sql.append(" AND type = :type ");
+                    countSql.append(" AND type = :type ");
+                    params.put("type", value);
+                }
+            }
+        });
     }
 }
