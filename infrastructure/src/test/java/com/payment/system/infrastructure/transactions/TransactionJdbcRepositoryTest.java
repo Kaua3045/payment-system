@@ -4,6 +4,7 @@ import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.pixkeys.PixKeyId;
+import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionType;
 import com.payment.system.domain.utils.IdentifierUtils;
@@ -32,6 +33,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -63,6 +65,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -75,6 +78,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                         aTransaction.getPixKeyId(),
                         aTransaction.getAmount(),
                         aTransaction.getType(),
+                        aTransaction.getSource(),
                         aTransaction.getIdempotencyKey()
                 )));
 
@@ -93,6 +97,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -126,6 +131,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -159,6 +165,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -190,6 +197,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -213,8 +221,8 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     @Sql(statements = {
-            "INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, idempotency_key, failure_reason, created_at, updated_at, version) " +
-                    "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', '01KGB053FZJ0PC00HD9QZWAJ1H', '01KGB053FZJ0PC00HD9QZWAJ2H', '01KGB053FZJ0PC00HD9QZWAJ3H', 10, 'INVALID', 'TRANSFER', '1712687316266128', NULL, NOW(), NOW(), 1)"
+            "INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, source, idempotency_key, failure_reason, created_at, updated_at, version) " +
+                    "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', '01KGB053FZJ0PC00HD9QZWAJ1H', '01KGB053FZJ0PC00HD9QZWAJ2H', '01KGB053FZJ0PC00HD9QZWAJ3H', 10, 'INVALID', 'TRANSFER', 'source', '1712687316266128', NULL, NOW(), NOW(), 1)"
     })
     void givenAnInvalidTransactionStatusInDB_whenCallsTransactionOfIdempotencyKey_thenShouldReturnIt() {
         Assertions.assertEquals(1, countTransactions());
@@ -232,8 +240,8 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     @Sql(statements = {
-            "INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, idempotency_key, failure_reason, created_at, updated_at, version) " +
-                    "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', '01KGB053FZJ0PC00HD9QZWAJ1H', '01KGB053FZJ0PC00HD9QZWAJ2H', '01KGB053FZJ0PC00HD9QZWAJ3H', 10, 'PENDING', 'INVALID', '1712687316266128', NULL, NOW(), NOW(), 1)"
+            "INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, source, idempotency_key, failure_reason, created_at, updated_at, version) " +
+                    "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', '01KGB053FZJ0PC00HD9QZWAJ1H', '01KGB053FZJ0PC00HD9QZWAJ2H', '01KGB053FZJ0PC00HD9QZWAJ3H', 10, 'PENDING', 'INVALID', 'ATM', '1712687316266128', NULL, NOW(), NOW(), 1)"
     })
     void givenAnInvalidTransactionTypeInDB_whenCallsTransactionOfIdempotencyKey_thenShouldReturnIt() {
         Assertions.assertEquals(1, countTransactions());
@@ -259,6 +267,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -293,6 +302,7 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -306,5 +316,24 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
         );
 
         Assertions.assertTrue(aSavedTransaction.isEmpty());
+    }
+
+    @Test
+    @Sql(statements = {
+            "INSERT INTO transactions (id, from_account_id, to_account_id, pix_key_id, amount, status, type, source, idempotency_key, failure_reason, created_at, updated_at, version) " +
+                    "VALUES ('01KGB053FZJ0PC00HD9QZWAJ0H', '01KGB053FZJ0PC00HD9QZWAJ1H', '01KGB053FZJ0PC00HD9QZWAJ2H', '01KGB053FZJ0PC00HD9QZWAJ3H', 10, 'PENDING', 'TRANSFER', 'INVALID', '1712687316266128', NULL, NOW(), NOW(), 1)"
+    })
+    void givenAnInvalidDepositSourceInDB_whenCallsTransactionOfIdAndAccountId_thenShouldThrowsException() {
+        Assertions.assertEquals(1, countTransactions());
+
+        final var expectedErrorMessage = "should not be null";
+        final var expectedErrorProperty = "source";
+
+        final var aException = Assertions.assertThrows(ValidationException.class,
+                () -> this.transactionRepository().transactionOfIdAndAccountId("01KGB053FZJ0PC00HD9QZWAJ0H", "01KGB053FZJ0PC00HD9QZWAJ1H"));
+
+        Assertions.assertEquals(1, aException.getErrors().size());
+        Assertions.assertEquals(expectedErrorMessage, aException.getErrors().getFirst().message());
+        Assertions.assertEquals(expectedErrorProperty, aException.getErrors().getFirst().property());
     }
 }

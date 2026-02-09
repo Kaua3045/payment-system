@@ -1,4 +1,4 @@
-package com.payment.system.application.usecases.transactions.create;
+package com.payment.system.application.usecases.transactions.deposit;
 
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.AccountRepository;
@@ -6,6 +6,7 @@ import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
+import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
@@ -20,14 +21,14 @@ import com.payment.system.domain.valueobjects.Money;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
+public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
 
     private final AccountRepository accountRepository;
     private final PixKeyRepository pixKeyRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionManager transactionManager;
 
-    public DefaultCreateTransactionUseCase(
+    public DefaultCreateDepositUseCase(
             final AccountRepository accountRepository,
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
@@ -40,9 +41,9 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
     }
 
     @Override
-    public CreateTransactionOutput execute(final CreateTransactionCommand input) {
+    public CreateDepositOutput execute(final CreateDepositCommand input) {
         if (input == null) {
-            throw new UseCaseInputCannotBeNullException(CreateTransactionUseCase.class);
+            throw new UseCaseInputCannotBeNullException(CreateDepositUseCase.class);
         }
 
         try {
@@ -51,12 +52,8 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                     throw DomainException.with("Amount must be greater than zero");
                 }
 
-                final var aFromAccount = this.accountRepository.accountOfId(input.fromAccountId())
-                        .orElseThrow(NotFoundException.with(Account.class, input.fromAccountId()));
-
-                if (!aFromAccount.getStatus().equals(AccountStatus.ACTIVE)) {
-                    throw DomainException.with("From account is not active");
-                }
+                final var aSource = DepositSource.from(input.source())
+                        .orElseThrow(() -> NotFoundException.with("DepositSource %s not found".formatted(input.source())));
 
                 final var aPixKeyType = PixKeyType.from(input.pixKeyType())
                         .orElseThrow(() -> NotFoundException.with("PixKeyType %s not found".formatted(input.pixKeyType())));
@@ -74,27 +71,25 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 }
 
                 final var aTransaction = Transaction.newTransaction(
-                        aFromAccount.getId(),
+                        AccountId.system(),
                         aToAccount.getId(),
                         aPixKey.getId(),
                         new Money(input.amount()),
                         TransactionType.TRANSFER,
-                        DepositSource.EXTERNAL,
+                        aSource,
                         input.idempotencyKey()
                 );
 
                 this.transactionRepository.save(aTransaction);
 
-                aFromAccount.debit(input.amount());
                 aToAccount.credit(input.amount());
 
-                this.accountRepository.save(aFromAccount);
                 this.accountRepository.save(aToAccount);
 
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
 
-                return CreateTransactionOutput.from(aTransaction);
+                return CreateDepositOutput.from(aTransaction);
             });
         } catch (final DomainException ex) {
             this.transactionManager.execute(() -> {

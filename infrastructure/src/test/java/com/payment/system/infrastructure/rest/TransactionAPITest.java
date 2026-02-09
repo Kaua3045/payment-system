@@ -5,10 +5,14 @@ import com.payment.system.ControllerTest;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionCommand;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionOutput;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
+import com.payment.system.application.usecases.transactions.deposit.CreateDepositCommand;
+import com.payment.system.application.usecases.transactions.deposit.CreateDepositOutput;
+import com.payment.system.application.usecases.transactions.deposit.CreateDepositUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdOutput;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.pixkeys.PixKeyId;
+import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionStatus;
 import com.payment.system.domain.transactions.TransactionType;
@@ -45,8 +49,14 @@ class TransactionAPITest {
     @MockitoBean
     private GetTransactionByIdUseCase getTransactionByIdUseCase;
 
+    @MockitoBean
+    private CreateDepositUseCase createDepositUseCase;
+
     @Captor
     private ArgumentCaptor<CreateTransactionCommand> createTransactionCommandCaptor;
+
+    @Captor
+    private ArgumentCaptor<CreateDepositCommand> createDepositCommandCaptor;
 
     @Test
     void givenAValidRequest_whenCallsCreateTransaction_shouldReturnHttp201() throws Exception {
@@ -111,6 +121,7 @@ class TransactionAPITest {
                 new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
                 new Money(BigDecimal.TEN),
                 TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
                 "1238712712678368126834"
         );
 
@@ -138,5 +149,61 @@ class TransactionAPITest {
                 .andExpect(jsonPath("$.updated_at").value(aTransaction.getUpdatedAt().toString()));
 
         Mockito.verify(getTransactionByIdUseCase, Mockito.times(1)).execute(any());
+    }
+
+    @Test
+    void givenAValidRequest_whenCallsCreateDeposit_shouldReturnHttp201() throws Exception {
+        final var aPixKey = "61268368712361";
+        final var aPixKeyType = "cpf";
+        final var aSource = "atm";
+        final var aAmount = new BigDecimal("10.50");
+
+        final var aIdempotencyKey = IdentifierUtils.generateNewId();
+
+        final var expectedTransactionId = IdentifierUtils.generateNewMonotonicULID().toString();
+        final var expectedStatus = TransactionStatus.COMPLETED.name();
+        final var expectedType = TransactionType.TRANSFER.name();
+
+        final var aRequestBody = """
+                {
+                    "pix_key": "%s",
+                    "pix_key_type": "%s",
+                    "source": "%s",
+                    "amount": "%s"
+                }
+                """.formatted(aPixKey, aPixKeyType, aSource, aAmount);
+
+        Mockito.when(createDepositUseCase.execute(any()))
+                .thenReturn(new CreateDepositOutput(
+                        expectedTransactionId,
+                        expectedStatus,
+                        expectedType
+                ));
+
+        final var aRequest = MockMvcRequestBuilders.post("/v1/transactions/deposit")
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .with(ApiTest.admin())
+                .content(aRequestBody)
+                .header(IdempotencyKey.IDEMPOTENCY_KEY_HEADER, aIdempotencyKey)
+                .accept(MediaType.APPLICATION_JSON_VALUE);
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.transaction_id").value(expectedTransactionId))
+                .andExpect(jsonPath("$.status").value(expectedStatus))
+                .andExpect(jsonPath("$.type").value(expectedType));
+
+        Mockito.verify(createDepositUseCase, Mockito.times(1)).execute(createDepositCommandCaptor.capture());
+
+        final var aCommandCaptured = createDepositCommandCaptor.getValue();
+
+        Assertions.assertEquals(aPixKeyType, aCommandCaptured.pixKeyType());
+        Assertions.assertEquals(aPixKey, aCommandCaptured.pixKey());
+        Assertions.assertEquals(aAmount, aCommandCaptured.amount());
+        Assertions.assertEquals(aSource, aCommandCaptured.source());
+        Assertions.assertEquals(aIdempotencyKey, aCommandCaptured.idempotencyKey());
     }
 }
