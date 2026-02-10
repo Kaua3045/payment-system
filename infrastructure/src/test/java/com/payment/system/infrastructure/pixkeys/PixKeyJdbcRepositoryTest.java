@@ -3,13 +3,17 @@ package com.payment.system.infrastructure.pixkeys;
 import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.NotFoundException;
-import com.payment.system.domain.pixkeys.PixKey;
-import com.payment.system.domain.pixkeys.PixKeyType;
-import com.payment.system.domain.pixkeys.PixKeyValueFactory;
+import com.payment.system.domain.pagination.SearchQuery;
+import com.payment.system.domain.pixkeys.*;
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.utils.InstantUtils;
+import com.payment.system.domain.utils.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.jdbc.Sql;
+
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
 
 class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
 
@@ -122,5 +126,221 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
         final var aSavedPixKey = this.pixKeyRepository().pixKeyOfActiveByValue("7912378816823681");
 
         Assertions.assertTrue(aSavedPixKey.isEmpty());
+    }
+
+    @Test
+    void givenNoPixKeys_whenCallsListAll_thenShouldReturnEmptyPagination() {
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc"
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertNotNull(result);
+        Assertions.assertTrue(result.items().isEmpty());
+
+        final var metadata = result.metadata();
+        Assertions.assertEquals(0, metadata.currentPage());
+        Assertions.assertEquals(10, metadata.perPage());
+        Assertions.assertEquals(0, metadata.totalItems());
+        Assertions.assertEquals(0, metadata.totalPages());
+    }
+
+    @Test
+    void givenMultiplePixKeys_whenCallsListAllWithPagination_thenShouldPaginateCorrectly() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        for (int i = 0; i < 15; i++) {
+            final var pixKey = PixKey.newPixKey(
+                    new PixKeyValueFactory().create(
+                            PixKeyType.RANDOM,
+                            "key-" + i
+                    ),
+                    accountId
+            );
+            this.pixKeyRepository().save(pixKey);
+        }
+
+        Assertions.assertEquals(15, countPixKeys());
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc"
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(10, result.items().size());
+
+        final var metadata = result.metadata();
+        Assertions.assertEquals(0, metadata.currentPage());
+        Assertions.assertEquals(10, metadata.perPage());
+        Assertions.assertEquals(15, metadata.totalItems());
+        Assertions.assertEquals(2, metadata.totalPages());
+    }
+
+    @Test
+    void givenMultiplePixKeys_whenCallsSecondPage_thenShouldReturnRemainingItems() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        for (int i = 0; i < 12; i++) {
+            this.pixKeyRepository().save(
+                    PixKey.newPixKey(
+                            new PixKeyValueFactory().create(
+                                    PixKeyType.RANDOM,
+                                    "pix-" + i
+                            ),
+                            accountId
+                    )
+            );
+        }
+
+        final var query = SearchQuery.newSearchQuery(
+                1,
+                10,
+                null,
+                "createdAt",
+                "asc"
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(2, result.items().size());
+        Assertions.assertEquals(12, result.metadata().totalItems());
+        Assertions.assertEquals(2, result.metadata().totalPages());
+    }
+
+    @Test
+    void givenPixKeys_whenCallsListAllWithTerms_thenShouldFilterByValueOrType() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "john@mail.com"),
+                        accountId
+                )
+        );
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.RANDOM, "random-key"),
+                        accountId
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                "john",
+                "createdAt",
+                "asc"
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+        Assertions.assertEquals("john@mail.com", result.items().get(0).getKey().value());
+    }
+
+    @Test
+    void givenPixKeys_whenCallsListAllWithTypeFilter_thenShouldReturnOnlyThatType() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "a@mail.com"),
+                        accountId
+                )
+        );
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.RANDOM, "abc"),
+                        accountId
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc",
+                Map.of("type", "EMAIL")
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+        Assertions.assertEquals(PixKeyType.EMAIL, result.items().get(0).getKey().type());
+    }
+
+    @Test
+    void givenPixKeysSavedViaRepository_whenFilterByPeriod_thenShouldReturnOnlyInsidePeriod() {
+        final var repository = this.pixKeyRepository();
+
+        final var factory = new PixKeyValueFactory();
+
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        final var oldDate = InstantUtils.now().minus(10, ChronoUnit.DAYS);
+        final var newDate = InstantUtils.now();
+
+        final var oldPixKey = PixKey.with(
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                0L,
+                factory.create(PixKeyType.from("EMAIL").get(), "old@mail.com"),
+                accountId,
+                PixKeyStatus.ACTIVE,
+                oldDate,
+                oldDate,
+                null
+        );
+
+        final var newPixKey = PixKey.with(
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                0L,
+                factory.create(PixKeyType.from("EMAIL").get(), "new@mail.com"),
+                accountId,
+                PixKeyStatus.ACTIVE,
+                newDate,
+                newDate,
+                null
+        );
+
+        repository.save(oldPixKey);
+        repository.save(newPixKey);
+
+        final var period = new Period(
+                InstantUtils.now().minus(2, ChronoUnit.DAYS),
+                InstantUtils.now().plus(1, ChronoUnit.DAYS)
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc",
+                period
+        );
+
+        final var result = repository.listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+
+        final var pixKey = result.items().get(0);
+
+        Assertions.assertEquals("new@mail.com", pixKey.getKey().value());
+        Assertions.assertEquals(PixKeyStatus.ACTIVE, pixKey.getStatus());
     }
 }
