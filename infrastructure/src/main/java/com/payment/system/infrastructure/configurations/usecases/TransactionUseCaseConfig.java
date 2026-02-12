@@ -9,6 +9,8 @@ import com.payment.system.application.usecases.transactions.deposit.CreateDeposi
 import com.payment.system.application.usecases.transactions.deposit.DefaultCreateDepositUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.DefaultGetTransactionByIdUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.list.DefaultListTransactionsUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
 import com.payment.system.application.wrapper.TransactionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,6 +54,15 @@ public class TransactionUseCaseConfig {
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager
+        );
+    }
+
+    @Bean
+    public ListTransactionsUseCase listTransactionsUseCase(
+            final TransactionRepository transactionRepository
+    ) {
+        return new DefaultListTransactionsUseCase(
+                transactionRepository
         );
     }
 }
