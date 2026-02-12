@@ -2,6 +2,10 @@ package com.payment.system.infrastructure.transactions;
 
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.exceptions.DomainException;
+import com.payment.system.domain.pagination.Pagination;
+import com.payment.system.domain.pagination.PaginationMetadata;
+import com.payment.system.domain.pagination.SearchQuery;
 import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.transactions.*;
 import com.payment.system.domain.utils.ULID;
@@ -67,6 +71,114 @@ public class TransactionJdbcRepository implements TransactionRepository {
     public Optional<Transaction> transactionOfIdAndAccountId(final String transactionId, final String accountId) {
         final var aSql = "SELECT * FROM transactions WHERE id = :transactionId AND (from_account_id = :accountId OR to_account_id = :accountId);";
         return this.databaseClient.queryOne(aSql, Map.of("transactionId", transactionId, "accountId", accountId), transactionMapper());
+    }
+
+    @Override
+    public Pagination<Transaction> listAll(final SearchQuery query) {
+        final var sql = new StringBuilder("""
+                    SELECT *
+                    FROM transactions
+                    WHERE 1=1
+                """);
+
+        final var countSql = new StringBuilder("""
+                    SELECT COUNT(*)
+                    FROM transactions
+                    WHERE 1=1
+                """);
+
+        final Map<String, Object> params = new HashMap<>();
+
+        // accountId nedded
+        final var accountId = query.filters().get("accountId");
+        if (accountId == null || accountId.isBlank()) {
+            throw DomainException.with("Filter accountId is required");
+        }
+
+        sql.append("""
+                    AND (from_account_id = :accountId OR to_account_id = :accountId)
+                """);
+
+        countSql.append("""
+                    AND (from_account_id = :accountId OR to_account_id = :accountId)
+                """);
+
+        params.put("accountId", accountId);
+
+        // textual search
+        if (query.terms() != null && !query.terms().isBlank()) {
+            sql.append("""
+                        AND (
+                            id ILIKE :terms
+                            OR idempotency_key ILIKE :terms
+                        )
+                    """);
+
+            countSql.append("""
+                        AND (
+                            id ILIKE :terms
+                            OR idempotency_key ILIKE :terms
+                        )
+                    """);
+
+            params.put("terms", "%" + query.terms() + "%");
+        }
+
+        // dynamic filters
+        applyFilters(query.filters(), sql, countSql, params);
+
+        // period
+        query.getPeriod().ifPresent(period -> {
+            sql.append("""
+                        AND created_at BETWEEN :start AND :end
+                    """);
+
+            countSql.append("""
+                        AND created_at BETWEEN :start AND :end
+                    """);
+
+            params.put(
+                    "start",
+                    OffsetDateTime.ofInstant(period.start(), ZoneOffset.UTC)
+            );
+            params.put(
+                    "end",
+                    OffsetDateTime.ofInstant(period.end(), ZoneOffset.UTC)
+            );
+        });
+
+        // security ordenation
+        sql.append(buildOrderBy(query));
+
+        // pagination
+        sql.append(" LIMIT :limit OFFSET :offset ");
+        params.put("limit", query.perPage());
+        params.put("offset", query.page() * query.perPage());
+
+        final var items = this.databaseClient.query(
+                sql.toString(),
+                params,
+                transactionMapper()
+        );
+
+        final var total = this.databaseClient.count(
+                countSql.toString(),
+                params
+        );
+
+        final var totalPages = (int) Math.ceil(
+                (double) total / query.perPage()
+        );
+
+        return new Pagination<>(
+                new PaginationMetadata(
+                        query.page(),
+                        query.perPage(),
+                        totalPages,
+                        total
+                ),
+                items
+        );
     }
 
     private void create(final Transaction transaction) {
@@ -135,5 +247,63 @@ public class TransactionJdbcRepository implements TransactionRepository {
                 JdbcUtils.getInstant(rs, "created_at"),
                 JdbcUtils.getInstant(rs, "updated_at")
         );
+    }
+
+    private void applyFilters(
+            final Map<String, String> filters,
+            final StringBuilder sql,
+            final StringBuilder countSql,
+            final Map<String, Object> params
+    ) {
+        filters.forEach((key, value) -> {
+            switch (key) {
+                case "status" -> {
+                    sql.append(" AND status = :status ");
+                    countSql.append(" AND status = :status ");
+                    params.put("status", value);
+                }
+
+                case "type" -> {
+                    sql.append(" AND type = :type ");
+                    countSql.append(" AND type = :type ");
+                    params.put("type", value);
+                }
+
+                case "source" -> {
+                    sql.append(" AND source = :source ");
+                    countSql.append(" AND source = :source ");
+                    params.put("source", value);
+                }
+
+                case "fromAccountId" -> {
+                    sql.append(" AND from_account_id = :fromAccountId ");
+                    countSql.append(" AND from_account_id = :fromAccountId ");
+                    params.put("fromAccountId", value);
+                }
+
+                case "toAccountId" -> {
+                    sql.append(" AND to_account_id = :toAccountId ");
+                    countSql.append(" AND to_account_id = :toAccountId ");
+                    params.put("toAccountId", value);
+                }
+            }
+        });
+    }
+
+    private String buildOrderBy(final SearchQuery query) {
+
+        final var sort = switch (query.sort()) {
+            case "updatedAt" -> "updated_at";
+            case "amount" -> "amount";
+            case "status" -> "status";
+            default -> "created_at";
+        };
+
+        final var direction =
+                "desc".equalsIgnoreCase(query.direction())
+                        ? "DESC"
+                        : "ASC";
+
+        return " ORDER BY " + sort + " " + direction + " ";
     }
 }
