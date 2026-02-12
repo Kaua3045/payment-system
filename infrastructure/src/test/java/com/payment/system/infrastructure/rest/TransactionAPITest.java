@@ -10,7 +10,11 @@ import com.payment.system.application.usecases.transactions.deposit.CreateDeposi
 import com.payment.system.application.usecases.transactions.deposit.CreateDepositUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdOutput;
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
+import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsOutput;
+import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
 import com.payment.system.domain.accounts.AccountId;
+import com.payment.system.domain.pagination.Pagination;
+import com.payment.system.domain.pagination.PaginationMetadata;
 import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
@@ -32,6 +36,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,6 +56,9 @@ class TransactionAPITest {
 
     @MockitoBean
     private CreateDepositUseCase createDepositUseCase;
+
+    @MockitoBean
+    private ListTransactionsUseCase listTransactionsUseCase;
 
     @Captor
     private ArgumentCaptor<CreateTransactionCommand> createTransactionCommandCaptor;
@@ -205,5 +213,67 @@ class TransactionAPITest {
         Assertions.assertEquals(aAmount, aCommandCaptured.amount());
         Assertions.assertEquals(aSource, aCommandCaptured.source());
         Assertions.assertEquals(aIdempotencyKey, aCommandCaptured.idempotencyKey());
+    }
+
+    @Test
+    void givenAValidValues_whenCallListTransactions_thenReturnTransactionsPaginated() throws Exception {
+        final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        final var tx1 = ListTransactionsOutput.from(Transaction.newTransaction(
+                aAccountId,
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(new BigDecimal(10)),
+                TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
+                "idemp-1"
+        ));
+
+        final var tx2 = ListTransactionsOutput.from(Transaction.newTransaction(
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                aAccountId,
+                new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                new Money(new BigDecimal(20)),
+                TransactionType.TRANSFER,
+                DepositSource.EXTERNAL,
+                "idemp-2"
+        ));
+
+        final var aPage = 0;
+        final var aPerPage = 2;
+        final var aItemsCount = 2;
+        final var aPagesCount = 1;
+
+        final var aMetadata =
+                new PaginationMetadata(aPage, aPerPage, aPagesCount, aItemsCount);
+
+        Mockito.when(listTransactionsUseCase.execute(any()))
+                .thenReturn(new Pagination<>(aMetadata, List.of(tx1, tx2)));
+
+        final var aRequest = MockMvcRequestBuilders.get("/v1/transactions")
+                .with(ApiTest.admin())
+                .queryParam("accountId", aAccountId.value().toString())
+                .queryParam("status", "ACTIVE")
+                .queryParam("page", String.valueOf(aPage))
+                .queryParam("perPage", String.valueOf(aPerPage))
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE);
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.metadata.current_page").value(aPage))
+                .andExpect(jsonPath("$.metadata.per_page").value(aPerPage))
+                .andExpect(jsonPath("$.metadata.total_pages").value(aPagesCount))
+                .andExpect(jsonPath("$.metadata.total_items").value(aItemsCount))
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items").isNotEmpty())
+                .andExpect(jsonPath("$.items[0].transaction_id").value(tx1.transactionId()))
+                .andExpect(jsonPath("$.items[0].type").value(tx1.type()))
+                .andExpect(jsonPath("$.items[0].status").value(tx1.status()));
+
+        Mockito.verify(listTransactionsUseCase, Mockito.times(1)).execute(any());
     }
 }
