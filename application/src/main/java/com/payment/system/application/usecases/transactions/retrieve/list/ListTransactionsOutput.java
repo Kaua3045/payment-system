@@ -1,0 +1,41 @@
+package com.payment.system.application.usecases.transactions.retrieve.list;
+
+import com.payment.system.domain.transactions.Transaction;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+
+public record ListTransactionsOutput(
+        String transactionId,
+        long version,
+        String fromAccountId,
+        String toAccountId,
+        String pixKeyId,
+        BigDecimal amount,
+        String status,
+        String type,
+        String source,
+        String idempotencyKey,
+        String failureReason,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    public static ListTransactionsOutput from(final Transaction aTransaction) {
+        return new ListTransactionsOutput(
+                aTransaction.getId().value().toString(),
+                aTransaction.getVersion(),
+                aTransaction.getFromAccountId().value().toString(),
+                aTransaction.getToAccountId().value().toString(),
+                aTransaction.getPixKeyId().value().toString(),
+                aTransaction.getAmount().amount(),
+                aTransaction.getStatus().name(),
+                aTransaction.getType().name(),
+                aTransaction.getSource().name(),
+                aTransaction.getIdempotencyKey(),
+                aTransaction.getFailureReason().orElse(null),
+                aTransaction.getCreatedAt(),
+                aTransaction.getUpdatedAt()
+        );
+    }
+}
