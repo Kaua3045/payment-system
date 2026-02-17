@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.configurations.usecases;
 
+import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyUseCase;
 import com.payment.system.application.usecases.pixkeys.create.DefaultCreatePixKeyUseCase;
@@ -13,9 +14,10 @@ public class PixKeyUseCaseConfig {
 
     @Bean
     public CreatePixKeyUseCase createPixKeyUseCase(
-            final PixKeyRepository pixKeyRepository
-    ) {
-        return new DefaultCreatePixKeyUseCase(pixKeyRepository);
+            final PixKeyRepository pixKeyRepository,
+            final AccountRepository accountRepository
+            ) {
+        return new DefaultCreatePixKeyUseCase(pixKeyRepository, accountRepository);
     }
 
     @Bean
