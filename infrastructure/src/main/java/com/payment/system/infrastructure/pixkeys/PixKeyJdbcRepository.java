@@ -234,7 +234,7 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
                 case "type" -> {
                     sql.append(" AND type = :type ");
                     countSql.append(" AND type = :type ");
-                    params.put("type", value);
+                    params.put("type", value.toUpperCase());
                 }
                 case "value" -> {
                     final var aPixKeyType = PixKeyType.from(filters.get("type"))
