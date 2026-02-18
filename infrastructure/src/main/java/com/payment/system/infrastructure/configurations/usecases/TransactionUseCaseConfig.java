@@ -11,6 +11,7 @@ import com.payment.system.application.usecases.transactions.retrieve.id.DefaultG
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.DefaultListTransactionsUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
+import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,13 +24,15 @@ public class TransactionUseCaseConfig {
             final AccountRepository accountRepository,
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
-            final TransactionManager transactionManager
-    ) {
+            final TransactionManager transactionManager,
+            final Metrics metrics
+            ) {
         return new DefaultCreateTransactionUseCase(
                 accountRepository,
                 pixKeyRepository,
                 transactionRepository,
-                transactionManager
+                transactionManager,
+                 metrics
         );
     }
 
@@ -47,13 +50,15 @@ public class TransactionUseCaseConfig {
             final AccountRepository accountRepository,
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
-            final TransactionManager transactionManager
+            final TransactionManager transactionManager,
+            final Metrics metrics
     ) {
         return new DefaultCreateDepositUseCase(
                 accountRepository,
                 pixKeyRepository,
                 transactionRepository,
-                transactionManager
+                transactionManager,
+                metrics
         );
     }
 
