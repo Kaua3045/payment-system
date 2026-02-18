@@ -28,7 +28,7 @@ public class OtelConfig {
         final var aSdkTracerProvider = SdkTracerProvider.builder()
                 .addSpanProcessor(SimpleSpanProcessor.create(aInMemorySpanExporter))
                 .addResource(Resource.getDefault()
-                        .merge(Resource.create(Attributes.builder().put("service.name", "events-platform").build())))
+                        .merge(Resource.create(Attributes.builder().put("service.name", "payment-system").build())))
                 .build();
 
         return OpenTelemetrySdk.builder()
