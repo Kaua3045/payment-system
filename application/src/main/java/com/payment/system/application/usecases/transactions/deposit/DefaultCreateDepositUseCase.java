@@ -4,6 +4,7 @@ import com.payment.system.application.exceptions.UseCaseInputCannotBeNullExcepti
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
@@ -16,6 +17,7 @@ import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionType;
+import com.payment.system.domain.utils.Generated;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.math.BigDecimal;
@@ -27,17 +29,20 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
     private final PixKeyRepository pixKeyRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionManager transactionManager;
+    private final Metrics metrics;
 
     public DefaultCreateDepositUseCase(
             final AccountRepository accountRepository,
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
-            final TransactionManager transactionManager
+            final TransactionManager transactionManager,
+            final Metrics metrics
     ) {
         this.accountRepository = Objects.requireNonNull(accountRepository);
         this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
         this.transactionManager = Objects.requireNonNull(transactionManager);
+        this.metrics = Objects.requireNonNull(metrics);
     }
 
     @Override
@@ -46,7 +51,10 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
             throw new UseCaseInputCannotBeNullException(CreateDepositUseCase.class);
         }
 
+        final var aStartTime = System.currentTimeMillis();
+
         try {
+            this.metrics.incrementCounter("deposits.requested", 1);
             return this.transactionManager.execute(() -> {
                 if (input.amount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw DomainException.with("Amount must be greater than zero");
@@ -89,6 +97,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
 
+                this.metrics.incrementCounter("deposits.processed", 1);
                 return CreateDepositOutput.from(aTransaction);
             });
         } catch (final DomainException ex) {
@@ -100,7 +109,47 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                         });
                 return null;
             });
+
+            this.metrics.incrementCounter("deposits.failed", 1);
+            this.metrics.incrementCounter(resolveErrorMetric(ex), 1);
+
             throw ex;
+        } finally {
+            final var aDuration = System.currentTimeMillis() - aStartTime;
+            this.metrics.incrementCounter("deposits.latency", aDuration);
         }
+    }
+
+    @Generated
+    private String resolveErrorMetric(final Exception ex) {
+        if (ex instanceof NotFoundException notFound) {
+            final var aMessage = notFound.getMessage().toLowerCase();
+
+            if (aMessage.contains("account")) {
+                return "deposits.error.account_not_found";
+            }
+
+            if (aMessage.contains("pixkey")) {
+                return "deposits.error.pixkey_not_found";
+            }
+
+            return "deposits.error.not_found";
+        }
+
+        if (ex instanceof DomainException domain) {
+            final var aMessage = domain.getMessage().toLowerCase();
+
+            if (aMessage.contains("not active")) {
+                return "deposits.error.account_inactive";
+            }
+
+            if (aMessage.contains("insufficient")) {
+                return "deposits.error.insufficient_balance";
+            }
+
+            return "deposits.error.business_rule";
+        }
+
+        return "deposits.error.unexpected";
     }
 }
