@@ -260,19 +260,19 @@ public class TransactionJdbcRepository implements TransactionRepository {
                 case "status" -> {
                     sql.append(" AND status = :status ");
                     countSql.append(" AND status = :status ");
-                    params.put("status", value);
+                    params.put("status", value.toUpperCase());
                 }
 
                 case "type" -> {
                     sql.append(" AND type = :type ");
                     countSql.append(" AND type = :type ");
-                    params.put("type", value);
+                    params.put("type", value.toUpperCase());
                 }
 
                 case "source" -> {
                     sql.append(" AND source = :source ");
                     countSql.append(" AND source = :source ");
-                    params.put("source", value);
+                    params.put("source", value.toUpperCase());
                 }
 
                 case "fromAccountId" -> {

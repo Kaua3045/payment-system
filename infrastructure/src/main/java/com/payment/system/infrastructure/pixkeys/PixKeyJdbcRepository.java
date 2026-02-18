@@ -80,14 +80,12 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
         if (query.terms() != null && !query.terms().isBlank()) {
             sql.append("""
                         AND (
-                            key_value ILIKE :terms
-                            OR type ILIKE :terms
+                            type ILIKE :terms
                         )
                     """);
             countSql.append("""
                         AND (
-                            key_value ILIKE :terms
-                            OR type ILIKE :terms
+                            type ILIKE :terms
                         )
                     """);
             params.put("terms", "%" + query.terms() + "%");
@@ -236,7 +234,17 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
                 case "type" -> {
                     sql.append(" AND type = :type ");
                     countSql.append(" AND type = :type ");
-                    params.put("type", value);
+                    params.put("type", value.toUpperCase());
+                }
+                case "value" -> {
+                    final var aPixKeyType = PixKeyType.from(filters.get("type"))
+                            .orElseThrow(() -> NotFoundException.with("PixKeyType required on use value to search"));
+
+                    final var normalized = new PixKeyValueFactory().create(aPixKeyType, value).value();
+
+                    sql.append(" AND key_value = :value ");
+                    countSql.append(" AND key_value = :value ");
+                    params.put("value", normalized);
                 }
             }
         });

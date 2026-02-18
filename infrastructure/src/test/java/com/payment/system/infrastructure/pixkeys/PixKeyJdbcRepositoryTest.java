@@ -240,7 +240,76 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
         final var query = SearchQuery.newSearchQuery(
                 0,
                 10,
-                "john",
+                null,
+                "createdAt",
+                "asc",
+                Map.of(
+                        "type", "EMAIL",
+                        "value", "john@mail.com"
+                )
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+        Assertions.assertEquals("john@mail.com", result.items().get(0).getKey().value());
+    }
+
+    @Test
+    void givenValueFilterWithoutType_whenCallsListAll_thenShouldThrowNotFoundException() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "john@mail.com"),
+                        accountId
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc",
+                Map.of(
+                        "value", "john@mail.com"
+                )
+        );
+
+        final var exception = Assertions.assertThrows(
+                NotFoundException.class,
+                () -> this.pixKeyRepository().listAll(query)
+        );
+
+        Assertions.assertEquals(
+                "PixKeyType required on use value to search",
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void givenPixKeys_whenCallsListAllWithTerms_thenShouldFilterByTypeUsingILike() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "a@mail.com"),
+                        accountId
+                )
+        );
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.RANDOM, "abc"),
+                        accountId
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                "EMAIL",
                 "createdAt",
                 "asc"
         );
@@ -248,7 +317,45 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
         final var result = this.pixKeyRepository().listAll(query);
 
         Assertions.assertEquals(1, result.items().size());
-        Assertions.assertEquals("john@mail.com", result.items().get(0).getKey().value());
+        Assertions.assertEquals(PixKeyType.EMAIL, result.items().get(0).getKey().type());
+    }
+
+    @Test
+    void givenPixKeys_whenSortByUpdatedAt_thenShouldOrderCorrectly() throws InterruptedException {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        final var first = this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "a@mail.com"),
+                        accountId
+                )
+        );
+
+        final var second = this.pixKeyRepository().save(
+                PixKey.with(
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        0L,
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "b@mail.com"),
+                        accountId,
+                        PixKeyStatus.ACTIVE,
+                        InstantUtils.now().plus(10, ChronoUnit.MINUTES),
+                        InstantUtils.now().plus(10, ChronoUnit.MINUTES),
+                        null
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "updatedAt",
+                "asc"
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(first.getId(), result.items().get(0).getId());
+        Assertions.assertEquals(second.getId(), result.items().get(1).getId());
     }
 
     @Test
