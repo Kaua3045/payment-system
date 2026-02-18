@@ -9,11 +9,17 @@ import com.payment.system.infrastructure.configurations.json.Json;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import com.payment.system.infrastructure.pixkeys.req.CreatePixKeyRequest;
 import com.payment.system.infrastructure.pixkeys.res.CreatePixKeyResponse;
+import com.payment.system.infrastructure.transactions.req.CreateDepositRequest;
+import com.payment.system.infrastructure.transactions.req.CreateTransactionRequest;
+import com.payment.system.infrastructure.transactions.res.CreateDepositResponse;
+import com.payment.system.infrastructure.transactions.res.CreateTransactionResponse;
+import com.payment.system.infrastructure.transactions.res.GetTransactionByIdResponse;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -62,6 +68,31 @@ public interface MockDsl {
 
     default ResultActions listPixKeys(final int aPage, final int aPerPage, final String aSearch, final String aSort, final String aDirection, final String aStartDate, final String aEndDate, final Map<String, String> aFilters) throws Exception {
         return this.list("/v1/pix-keys", aPage, aPerPage, aSearch, aSort, aDirection, aStartDate, aEndDate, aFilters);
+    }
+
+    /* Transactions */
+
+    default CreateTransactionResponse givenAnTransaction(final String aFrommAccountId, final String aPixKey, final String aPixKeyType, final BigDecimal aAmount) throws Exception {
+        final var aRequest = new CreateTransactionRequest(aFrommAccountId, aPixKey, aPixKeyType, aAmount);
+        return this.givenAsResponse("/v1/transactions", aRequest, CreateTransactionResponse.class);
+    }
+
+    default CreateDepositResponse givenAnDeposit(final String aPixKey, final String aPixKeyType, final String aSource, final BigDecimal aAmount) throws Exception {
+        final var aRequest = new CreateDepositRequest(aPixKey, aPixKeyType, aSource, aAmount);
+        return this.givenAsResponse("/v1/transactions/deposit", aRequest, CreateDepositResponse.class);
+    }
+
+    default GetTransactionByIdResponse retrieveAnTransaction(final String aAccountId, final String aTransactionId) throws Exception {
+        return this.retrieve("/v1/transactions/", aAccountId + "/" + aTransactionId, GetTransactionByIdResponse.class);
+    }
+
+    default ResultActions listTransactions(final int aPage, final int aPerPage, final Map<String, String> aFilters) throws Exception {
+        return listTransactions(aPage, aPerPage, "", "", "", "", "", aFilters);
+    }
+
+
+    default ResultActions listTransactions(final int aPage, final int aPerPage, final String aSearch, final String aSort, final String aDirection, final String aStartDate, final String aEndDate, final Map<String, String> aFilters) throws Exception {
+        return this.list("/v1/transactions", aPage, aPerPage, aSearch, aSort, aDirection, aStartDate, aEndDate, aFilters);
     }
 
     private <T> T givenAsResponse(final String aUrl, final Object aBody, final Class<T> aClazz) throws Exception {
