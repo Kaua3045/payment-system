@@ -2,6 +2,7 @@ package com.payment.system.infrastructure.configurations;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
@@ -40,5 +41,11 @@ public class OtelConfig {
     @Profile({"prod", "development", "sandbox-local"})
     public Tracer tracer(final BuildProperties buildProperties) {
         return GlobalOpenTelemetry.getTracer(buildProperties.getName());
+    }
+
+    @Bean
+    @Profile({"prod", "development", "sandbox-local"})
+    public Meter meter(final BuildProperties buildProperties) {
+        return GlobalOpenTelemetry.getMeter(buildProperties.getName());
     }
 }
