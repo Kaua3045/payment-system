@@ -2,6 +2,7 @@ package com.payment.system.application.usecases.accounts.create;
 
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.AccountRepository;
+import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.domain.accounts.Account;
 
 import java.util.Objects;
@@ -9,9 +10,11 @@ import java.util.Objects;
 public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
 
     private final AccountRepository accountRepository;
+    private final Metrics metrics;
 
-    public DefaultCreateAccountUseCase(final AccountRepository accountRepository) {
+    public DefaultCreateAccountUseCase(final AccountRepository accountRepository, final Metrics metrics) {
         this.accountRepository = Objects.requireNonNull(accountRepository);
+        this.metrics = Objects.requireNonNull(metrics);
     }
 
     @Override
@@ -20,9 +23,16 @@ public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
             throw new UseCaseInputCannotBeNullException(CreateAccountUseCase.class);
         }
 
+        final var aStartTime = System.currentTimeMillis();
+
         final var aAccount = Account.newAccount(input.userId());
 
         this.accountRepository.save(aAccount);
+
+        final var aDuration = System.currentTimeMillis() - aStartTime;
+
+        this.metrics.incrementCounter("accounts_created_total", 1);
+        this.metrics.recordTime("accounts_created_latency", aDuration);
 
         return CreateAccountOutput.from(aAccount);
     }

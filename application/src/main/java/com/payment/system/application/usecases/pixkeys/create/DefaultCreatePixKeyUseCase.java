@@ -3,14 +3,14 @@ package com.payment.system.application.usecases.pixkeys.create;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
+import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.domain.accounts.Account;
-import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.pixkeys.PixKeyValueFactory;
-import com.payment.system.domain.utils.ULID;
+import com.payment.system.domain.utils.Generated;
 
 import java.util.Objects;
 
@@ -18,13 +18,16 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
 
     private final PixKeyRepository pixKeyRepository;
     private final AccountRepository accountRepository;
+    private final Metrics metrics;
 
     public DefaultCreatePixKeyUseCase(
             final PixKeyRepository pixKeyRepository,
-            final AccountRepository accountRepository
+            final AccountRepository accountRepository,
+            final Metrics metrics
     ) {
         this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
         this.accountRepository = Objects.requireNonNull(accountRepository);
+        this.metrics = Objects.requireNonNull(metrics);
     }
 
     @Override
@@ -32,6 +35,8 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
         if (input == null) {
             throw new UseCaseInputCannotBeNullException(CreatePixKeyUseCase.class);
         }
+
+        final var aStartTime = System.currentTimeMillis();
 
         final var aExistsKey = this.pixKeyRepository.existsByValue(input.value());
 
@@ -54,6 +59,23 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
 
         this.pixKeyRepository.save(aPixKey);
 
+        final var aDuration = System.currentTimeMillis() - aStartTime;
+
+        this.metrics.incrementCounter("pixkeys_created_total", 1);
+        this.metrics.recordTime("pixkeys_created_latency", aDuration);
+        this.metrics.incrementCounter(resolveMetricNameByPixKeyType(aType), 1);
+
         return CreatePixKeyOutput.from(aPixKey);
+    }
+
+    @Generated
+    private String resolveMetricNameByPixKeyType(final PixKeyType aType) {
+        return switch (aType) {
+            case CPF -> "pixkeys_created_by_type_cpf";
+            case CNPJ -> "pixkeys_created_by_type_cnpj";
+            case EMAIL -> "pixkeys_created_by_type_email";
+            case RANDOM -> "pixkeys_created_by_type_random";
+            default -> "pixkeys_created_by_type_unexpected";
+        };
     }
 }

@@ -100,7 +100,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 this.metrics.incrementCounter("deposits_processed", 1);
                 return CreateDepositOutput.from(aTransaction);
             });
-        } catch (final DomainException ex) {
+        } catch (final Exception ex) {
             this.transactionManager.execute(() -> {
                 this.transactionRepository.transactionOfIdempotencyKey(input.idempotencyKey())
                         .ifPresent(tx -> {
