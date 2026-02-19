@@ -6,6 +6,7 @@ import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyUseCas
 import com.payment.system.application.usecases.pixkeys.create.DefaultCreatePixKeyUseCase;
 import com.payment.system.application.usecases.pixkeys.retrieve.list.DefaultListPixKeysUseCase;
 import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysUseCase;
+import com.payment.system.application.wrapper.Metrics;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,9 +16,10 @@ public class PixKeyUseCaseConfig {
     @Bean
     public CreatePixKeyUseCase createPixKeyUseCase(
             final PixKeyRepository pixKeyRepository,
-            final AccountRepository accountRepository
-            ) {
-        return new DefaultCreatePixKeyUseCase(pixKeyRepository, accountRepository);
+            final AccountRepository accountRepository,
+            final Metrics metrics
+    ) {
+        return new DefaultCreatePixKeyUseCase(pixKeyRepository, accountRepository, metrics);
     }
 
     @Bean
