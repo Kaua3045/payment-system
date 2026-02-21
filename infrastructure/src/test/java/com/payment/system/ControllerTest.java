@@ -3,6 +3,7 @@ package com.payment.system;
 import com.payment.system.infrastructure.configurations.OtelConfig;
 import com.payment.system.infrastructure.configurations.SecurityConfig;
 import com.payment.system.infrastructure.idempotency.gateways.InMemoryIdempotencyKeyGateway;
+import com.payment.system.infrastructure.wrapper.OpenTelemetryMetrics;
 import com.payment.system.infrastructure.wrapper.TracerWrapperOtel;
 import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -17,7 +18,7 @@ import java.lang.annotation.*;
 @Inherited
 @ActiveProfiles("test-integration")
 @WebMvcTest
-@Import({SecurityConfig.class, IntegrationTestConfig.class, OtelConfig.class, InMemoryIdempotencyKeyGateway.class, ObservationTest.OpenTelemetryTestConfig.class, TracerWrapperOtel.class})
+@Import({SecurityConfig.class, IntegrationTestConfig.class, OtelConfig.class, InMemoryIdempotencyKeyGateway.class, ObservationTest.OpenTelemetryTestConfig.class, TracerWrapperOtel.class, OpenTelemetryMetrics.class})
 @Tag("integrationTest")
 public @interface ControllerTest {
 

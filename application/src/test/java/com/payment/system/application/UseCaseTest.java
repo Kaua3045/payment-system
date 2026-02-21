@@ -1,5 +1,6 @@
 package com.payment.system.application;
 
+import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.ObservationContext;
 import com.payment.system.application.wrapper.TracerWrapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,9 @@ public abstract class UseCaseTest {
 
     @Mock
     protected TracerWrapper tracerWrapper;
+
+    @Mock
+    protected Metrics metrics;
 
     @BeforeEach
     void setupTracerWrapper() {

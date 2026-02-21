@@ -2,6 +2,7 @@ package com.payment.system;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
@@ -86,6 +87,11 @@ public interface ObservationTest {
         @Bean
         public Tracer tracer() {
             return openTelemetry().getTracer("tests");
+        }
+
+        @Bean
+        public Meter meter() {
+            return openTelemetry().getMeter("tests");
         }
     }
 }
