@@ -3,6 +3,7 @@ package com.payment.system.application.usecases.pixkeys.create;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.exceptions.DomainException;
@@ -23,8 +24,10 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
     public DefaultCreatePixKeyUseCase(
             final PixKeyRepository pixKeyRepository,
             final AccountRepository accountRepository,
-            final Metrics metrics
+            final Metrics metrics,
+            final ApplicationLogger logger
     ) {
+        super(logger);
         this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
         this.accountRepository = Objects.requireNonNull(accountRepository);
         this.metrics = Objects.requireNonNull(metrics);

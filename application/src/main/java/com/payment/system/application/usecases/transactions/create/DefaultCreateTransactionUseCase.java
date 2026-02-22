@@ -4,6 +4,7 @@ import com.payment.system.application.exceptions.UseCaseInputCannotBeNullExcepti
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
@@ -35,8 +36,10 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics
+            final Metrics metrics,
+            final ApplicationLogger logger
     ) {
+        super(logger);
         this.accountRepository = Objects.requireNonNull(accountRepository);
         this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
