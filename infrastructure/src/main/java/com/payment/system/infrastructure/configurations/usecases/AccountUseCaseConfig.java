@@ -5,8 +5,8 @@ import com.payment.system.application.usecases.accounts.create.CreateAccountUseC
 import com.payment.system.application.usecases.accounts.create.DefaultCreateAccountUseCase;
 import com.payment.system.application.usecases.accounts.retrieve.id.DefaultGetAccountByIdUseCase;
 import com.payment.system.application.usecases.accounts.retrieve.id.GetAccountByIdUseCase;
-import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
+import com.payment.system.infrastructure.wrapper.Slf4jApplicationLogger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,17 +16,15 @@ public class AccountUseCaseConfig {
     @Bean
     public CreateAccountUseCase createAccountUseCase(
             final AccountRepository accountRepository,
-            final Metrics metrics,
-            final ApplicationLogger logger
+            final Metrics metrics
     ) {
-        return new DefaultCreateAccountUseCase(accountRepository, metrics, logger);
+        return new DefaultCreateAccountUseCase(accountRepository, metrics, new Slf4jApplicationLogger(CreateAccountUseCase.class));
     }
 
     @Bean
     public GetAccountByIdUseCase getAccountByIdUseCase(
-            final AccountRepository accountRepository,
-            final ApplicationLogger logger
+            final AccountRepository accountRepository
     ) {
-        return new DefaultGetAccountByIdUseCase(accountRepository, logger);
+        return new DefaultGetAccountByIdUseCase(accountRepository, new Slf4jApplicationLogger(GetAccountByIdUseCase.class));
     }
 }

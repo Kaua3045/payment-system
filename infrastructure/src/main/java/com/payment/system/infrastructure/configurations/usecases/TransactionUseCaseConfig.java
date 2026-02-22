@@ -11,9 +11,9 @@ import com.payment.system.application.usecases.transactions.retrieve.id.DefaultG
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.DefaultListTransactionsUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
-import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
+import com.payment.system.infrastructure.wrapper.Slf4jApplicationLogger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,8 +26,7 @@ public class TransactionUseCaseConfig {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics,
-            final ApplicationLogger logger
+            final Metrics metrics
     ) {
         return new DefaultCreateTransactionUseCase(
                 accountRepository,
@@ -35,18 +34,17 @@ public class TransactionUseCaseConfig {
                 transactionRepository,
                 transactionManager,
                 metrics,
-                logger
+                new Slf4jApplicationLogger(CreateTransactionUseCase.class)
         );
     }
 
     @Bean
     public GetTransactionByIdUseCase getTransactionByIdUseCase(
-            final TransactionRepository transactionRepository,
-            final ApplicationLogger logger
+            final TransactionRepository transactionRepository
     ) {
         return new DefaultGetTransactionByIdUseCase(
                 transactionRepository,
-                logger
+                new Slf4jApplicationLogger(GetTransactionByIdUseCase.class)
         );
     }
 
@@ -56,8 +54,7 @@ public class TransactionUseCaseConfig {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics,
-            final ApplicationLogger logger
+            final Metrics metrics
     ) {
         return new DefaultCreateDepositUseCase(
                 accountRepository,
@@ -65,18 +62,17 @@ public class TransactionUseCaseConfig {
                 transactionRepository,
                 transactionManager,
                 metrics,
-                logger
+                new Slf4jApplicationLogger(CreateDepositUseCase.class)
         );
     }
 
     @Bean
     public ListTransactionsUseCase listTransactionsUseCase(
-            final TransactionRepository transactionRepository,
-            final ApplicationLogger logger
+            final TransactionRepository transactionRepository
     ) {
         return new DefaultListTransactionsUseCase(
                 transactionRepository,
-                logger
+                new Slf4jApplicationLogger(ListTransactionsUseCase.class)
         );
     }
 }

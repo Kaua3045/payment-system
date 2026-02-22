@@ -8,6 +8,7 @@ import com.payment.system.application.usecases.pixkeys.retrieve.list.DefaultList
 import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysUseCase;
 import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
+import com.payment.system.infrastructure.wrapper.Slf4jApplicationLogger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,22 +19,20 @@ public class PixKeyUseCaseConfig {
     public CreatePixKeyUseCase createPixKeyUseCase(
             final PixKeyRepository pixKeyRepository,
             final AccountRepository accountRepository,
-            final Metrics metrics,
-            final ApplicationLogger logger
+            final Metrics metrics
     ) {
         return new DefaultCreatePixKeyUseCase(
                 pixKeyRepository,
                 accountRepository,
                 metrics,
-                logger
+                new Slf4jApplicationLogger(CreatePixKeyUseCase.class)
         );
     }
 
     @Bean
     public ListPixKeysUseCase listPixKeysUseCase(
-            final PixKeyRepository pixKeyRepository,
-            final ApplicationLogger logger
+            final PixKeyRepository pixKeyRepository
     ) {
-        return new DefaultListPixKeysUseCase(pixKeyRepository, logger);
+        return new DefaultListPixKeysUseCase(pixKeyRepository, new Slf4jApplicationLogger(ListPixKeysUseCase.class));
     }
 }
