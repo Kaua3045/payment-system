@@ -5,6 +5,7 @@ import com.payment.system.application.usecases.accounts.create.CreateAccountUseC
 import com.payment.system.application.usecases.accounts.create.DefaultCreateAccountUseCase;
 import com.payment.system.application.usecases.accounts.retrieve.id.DefaultGetAccountByIdUseCase;
 import com.payment.system.application.usecases.accounts.retrieve.id.GetAccountByIdUseCase;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,15 +16,17 @@ public class AccountUseCaseConfig {
     @Bean
     public CreateAccountUseCase createAccountUseCase(
             final AccountRepository accountRepository,
-            final Metrics metrics
+            final Metrics metrics,
+            final ApplicationLogger logger
     ) {
-        return new DefaultCreateAccountUseCase(accountRepository, metrics);
+        return new DefaultCreateAccountUseCase(accountRepository, metrics, logger);
     }
 
     @Bean
     public GetAccountByIdUseCase getAccountByIdUseCase(
-            final AccountRepository accountRepository
+            final AccountRepository accountRepository,
+            final ApplicationLogger logger
     ) {
-        return new DefaultGetAccountByIdUseCase(accountRepository);
+        return new DefaultGetAccountByIdUseCase(accountRepository, logger);
     }
 }

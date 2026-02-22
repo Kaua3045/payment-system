@@ -11,6 +11,7 @@ import com.payment.system.application.usecases.transactions.retrieve.id.DefaultG
 import com.payment.system.application.usecases.transactions.retrieve.id.GetTransactionByIdUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.DefaultListTransactionsUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
 import org.springframework.context.annotation.Bean;
@@ -25,23 +26,27 @@ public class TransactionUseCaseConfig {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics
-            ) {
+            final Metrics metrics,
+            final ApplicationLogger logger
+    ) {
         return new DefaultCreateTransactionUseCase(
                 accountRepository,
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager,
-                 metrics
+                metrics,
+                logger
         );
     }
 
     @Bean
     public GetTransactionByIdUseCase getTransactionByIdUseCase(
-            final TransactionRepository transactionRepository
+            final TransactionRepository transactionRepository,
+            final ApplicationLogger logger
     ) {
         return new DefaultGetTransactionByIdUseCase(
-                transactionRepository
+                transactionRepository,
+                logger
         );
     }
 
@@ -51,23 +56,27 @@ public class TransactionUseCaseConfig {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics
+            final Metrics metrics,
+            final ApplicationLogger logger
     ) {
         return new DefaultCreateDepositUseCase(
                 accountRepository,
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager,
-                metrics
+                metrics,
+                logger
         );
     }
 
     @Bean
     public ListTransactionsUseCase listTransactionsUseCase(
-            final TransactionRepository transactionRepository
+            final TransactionRepository transactionRepository,
+            final ApplicationLogger logger
     ) {
         return new DefaultListTransactionsUseCase(
-                transactionRepository
+                transactionRepository,
+                logger
         );
     }
 }
