@@ -38,11 +38,11 @@ public class AccountJdbcRepository implements AccountRepository {
     @Override
     public Account save(final Account anAccount) {
         if (anAccount.getVersion() == 0) {
-            log.info("Creating a new account with ID: {}", anAccount.getId().value().toString());
+            log.debug("Creating a new account with ID: {}", anAccount.getId().value().toString());
             create(anAccount);
             log.info("Account created with ID: {}", anAccount.getId().value().toString());
         } else {
-            log.info("Updating account with ID: {}", anAccount.getId().value().toString());
+            log.debug("Updating account with ID: {}", anAccount.getId().value().toString());
             update(anAccount);
             log.info("Updated account with ID: {}", anAccount.getId().value().toString());
         }

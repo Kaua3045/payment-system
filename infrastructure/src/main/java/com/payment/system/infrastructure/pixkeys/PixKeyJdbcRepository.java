@@ -39,7 +39,7 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
     @Override
     public PixKey save(final PixKey pixKey) {
         if (pixKey.getVersion() == 0) {
-            log.info("Creating a new pix key with ID: {}", pixKey.getId().value().toString());
+            log.debug("Creating a new pix key with ID: {}", pixKey.getId().value().toString());
             create(pixKey);
             log.info("Pix key created with ID: {}", pixKey.getId().value().toString());
         }

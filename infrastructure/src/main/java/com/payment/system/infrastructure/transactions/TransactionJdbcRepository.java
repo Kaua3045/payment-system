@@ -42,11 +42,11 @@ public class TransactionJdbcRepository implements TransactionRepository {
     @Override
     public Transaction save(final Transaction transaction) {
         if (transaction.getVersion() == 0) {
-            log.info("Creating a new transaction wit ID: {}", transaction.getId().value().toString());
+            log.debug("Creating a new transaction wit ID: {}", transaction.getId().value().toString());
             create(transaction);
             log.info("Transaction created with ID: {}", transaction.getId().value().toString());
         } else {
-            log.info("Updating transaction with ID: {}", transaction.getId().value().toString());
+            log.debug("Updating transaction with ID: {}", transaction.getId().value().toString());
             update(transaction);
             log.info("Transaction updated with ID: {}", transaction.getId().value().toString());
         }
