@@ -1,5 +1,6 @@
 package com.payment.system.application;
 
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.ObservationContext;
 import com.payment.system.application.wrapper.TracerWrapper;
@@ -26,6 +27,9 @@ public abstract class UseCaseTest {
 
     @Mock
     protected Metrics metrics;
+
+    @Mock
+    protected ApplicationLogger applicationLogger;
 
     @BeforeEach
     void setupTracerWrapper() {
