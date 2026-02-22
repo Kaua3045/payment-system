@@ -24,6 +24,7 @@ import com.payment.system.domain.utils.Generated;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 
 public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
@@ -62,7 +63,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 input.pixKeyType(), input.source(), input.amount(), input.idempotencyKey());
 
         try {
-            this.metrics.incrementCounter("deposits_requested", 1);
+            this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of("usecase", "deposit_create"));
             return this.transactionManager.execute(() -> {
                 if (input.amount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw DomainException.with("Amount must be greater than zero");
@@ -105,7 +106,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
 
-                this.metrics.incrementCounter("deposits_processed", 1);
+                this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of("usecase", "deposit_create"));
 
                 logger.info("event=deposit_completed transactionId={} toAccountId={} amount={} idempotencyKey={}",
                         aTransaction.getId().value().toString(),
@@ -136,13 +137,15 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 logger.error("event=deposit_error idempotencyKey={}", input.idempotencyKey(), ex);
             }
 
-            this.metrics.incrementCounter("deposits_failed", 1);
-            this.metrics.incrementCounter(resolveErrorMetric(ex), 1);
+            this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
+                    "usecase", "deposit_create",
+                    "error_code", resolveErrorMetric(ex)
+            ));
 
             throw ex;
         } finally {
             final var aDuration = System.currentTimeMillis() - aStartTime;
-            this.metrics.incrementCounter("deposits_latency", aDuration);
+            this.metrics.incrementCounter("application_usecase_duration", aDuration, Map.of("usecase", "deposit_create"));
         }
     }
 
@@ -152,30 +155,30 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
             final var aMessage = notFound.getMessage().toLowerCase();
 
             if (aMessage.contains("account")) {
-                return "deposits_error_account_not_found";
+                return "account_not_found";
             }
 
             if (aMessage.contains("pixkey")) {
-                return "deposits_error_pixkey_not_found";
+                return "pixkey_not_found";
             }
 
-            return "deposits_error_not_found";
+            return "not_found";
         }
 
         if (ex instanceof DomainException domain) {
             final var aMessage = domain.getMessage().toLowerCase();
 
             if (aMessage.contains("not active")) {
-                return "deposits_error_account_inactive";
+                return "account_inactive";
             }
 
             if (aMessage.contains("insufficient")) {
-                return "deposits_error_insufficient_balance";
+                return "insufficient_balance";
             }
 
-            return "deposits_error_business_rule";
+            return "business_rule";
         }
 
-        return "deposits_error_unexpected";
+        return "unexpected";
     }
 }

@@ -42,11 +42,11 @@ public class TransactionJdbcRepository implements TransactionRepository {
     @Override
     public Transaction save(final Transaction transaction) {
         if (transaction.getVersion() == 0) {
-            log.info("Creating a new transaction wit ID: {}", transaction.getId().value().toString());
+            log.debug("Creating a new transaction wit ID: {}", transaction.getId().value().toString());
             create(transaction);
             log.info("Transaction created with ID: {}", transaction.getId().value().toString());
         } else {
-            log.info("Updating transaction with ID: {}", transaction.getId().value().toString());
+            log.debug("Updating transaction with ID: {}", transaction.getId().value().toString());
             update(transaction);
             log.info("Transaction updated with ID: {}", transaction.getId().value().toString());
         }
@@ -190,6 +190,12 @@ public class TransactionJdbcRepository implements TransactionRepository {
         try {
             executeUpdate(aSql, transaction);
         } catch (Exception ex) {
+            log.error("Database error while creating transaction transactionId={} idempotencyKey={}",
+                    transaction.getId().value().toString(),
+                    transaction.getIdempotencyKey(),
+                    ex
+            );
+
             throw ConflictException.with(
                     "Transaction with idempotencyKey %s already exists"
                             .formatted(transaction.getIdempotencyKey())
@@ -205,6 +211,11 @@ public class TransactionJdbcRepository implements TransactionRepository {
                 """;
 
         if (executeUpdate(aSql, transaction) == 0) {
+            log.warn("Optimistic lock failure on transaction update transactionId={} idempotencyKey={} version={}",
+                    transaction.getId().value().toString(),
+                    transaction.getIdempotencyKey(),
+                    transaction.getVersion()
+            );
             throw ConflictException.with("Transaction with identifier %s and version %d does not match, transaction was updated by another transaction"
                     .formatted(transaction.getId().value(), transaction.getVersion()));
         }

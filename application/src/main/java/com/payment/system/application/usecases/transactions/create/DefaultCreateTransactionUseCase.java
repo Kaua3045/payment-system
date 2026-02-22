@@ -23,6 +23,7 @@ import com.payment.system.domain.utils.Generated;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 
 public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
@@ -61,7 +62,9 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 input.fromAccountId(), input.pixKeyType(), input.amount(), input.idempotencyKey());
 
         try {
-            this.metrics.incrementCounter("pix_transfers_requested", 1);
+            this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of(
+                    "usecase", "pix_transfer"
+            ));
             return this.transactionManager.execute(() -> {
                 if (input.amount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw DomainException.with("Amount must be greater than zero");
@@ -110,8 +113,11 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
 
-                this.metrics.incrementCounter("pix_transfers_processed", 1);
-                this.metrics.incrementCounter("pix_transfers_amount_total", aTransaction.getAmount().amount().longValue());
+                this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of(
+                        "usecase", "pix_transfer"
+                ));
+                this.metrics.incrementCounter("transaction_amount_total", aTransaction.getAmount().amount().longValue(),
+                        Map.of("usecase", "pix_transfer"));
 
                 logger.info("event=pix_transfer_completed transactionId={} fromAccountId={} toAccountId={} amount={} idempotencyKey={}",
                         aTransaction.getId().value().toString(),
@@ -143,12 +149,16 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 logger.error("event=pix_transfer_error idempotencyKey={}", input.idempotencyKey(), ex);
             }
 
-            this.metrics.incrementCounter("pix_transfers_failed", 1);
-            this.metrics.incrementCounter(resolveErrorMetric(ex), 1);
+            this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
+                    "usecase", "pix_transfer",
+                    "error_code", resolveErrorMetric(ex)
+            ));
             throw ex;
         } finally {
             final var aDuration = System.currentTimeMillis() - aStartTime;
-            this.metrics.recordTime("pix_transfers_latency", aDuration);
+            this.metrics.recordTime("application_usecase_duration", aDuration, Map.of(
+                    "usecase", "pix_transfer"
+            ));
         }
     }
 
@@ -158,30 +168,30 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
             final var aMessage = notFound.getMessage().toLowerCase();
 
             if (aMessage.contains("account")) {
-                return "pix_transfers_error_account_not_found";
+                return "account_not_found";
             }
 
             if (aMessage.contains("pixkey")) {
-                return "pix_transfers_error_pixkey_not_found";
+                return "pixkey_not_found";
             }
 
-            return "pix_transfers_error_not_found";
+            return "not_found";
         }
 
         if (ex instanceof DomainException domain) {
             final var aMessage = domain.getMessage().toLowerCase();
 
             if (aMessage.contains("not active")) {
-                return "pix_transfers_error_account_inactive";
+                return "account_inactive";
             }
 
             if (aMessage.contains("insufficient")) {
-                return "pix_transfers_error_insufficient_balance";
+                return "insufficient_balance";
             }
 
-            return "pix_transfers_error_business_rule";
+            return "business_rule";
         }
 
-        return "pix_transfers_error_unexpected";
+        return "unexpected";
     }
 }

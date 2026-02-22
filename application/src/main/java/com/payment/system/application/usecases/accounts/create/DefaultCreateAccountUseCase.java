@@ -6,6 +6,7 @@ import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.domain.accounts.Account;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
@@ -29,6 +30,10 @@ public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
             throw new UseCaseInputCannotBeNullException(CreateAccountUseCase.class);
         }
 
+        this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of(
+                "usecase", "account_create"
+        ));
+
         final var aStartTime = System.currentTimeMillis();
 
         logger.info("event=account_create_requested userId={}", input.userId());
@@ -44,8 +49,12 @@ public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
                 input.userId()
         );
 
-        this.metrics.incrementCounter("accounts_created_total", 1);
-        this.metrics.recordTime("accounts_created_latency", aDuration);
+        this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of(
+                "usecase", "account_create"
+        ));
+        this.metrics.recordTime("application_usecase_duration", aDuration, Map.of(
+                "usecase", "account_create"
+        ));
 
         return CreateAccountOutput.from(aAccount);
     }

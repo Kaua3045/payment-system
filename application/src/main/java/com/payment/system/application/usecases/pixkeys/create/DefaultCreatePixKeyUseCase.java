@@ -11,8 +11,8 @@ import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.pixkeys.PixKeyValueFactory;
-import com.payment.system.domain.utils.Generated;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
@@ -43,6 +43,8 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
 
         logger.info("event=pix_key_create_requested pixKeyType={} accountId={}", input.type(), input.accountId());
 
+        this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of("usecase", "pixkey_create"));
+
         final var aExistsKey = this.pixKeyRepository.existsByValue(input.value());
 
         if (aExistsKey) {
@@ -72,21 +74,12 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
                 aPixKey.getAccountId().value().toString()
         );
 
-        this.metrics.incrementCounter("pixkeys_created_total", 1);
-        this.metrics.recordTime("pixkeys_created_latency", aDuration);
-        this.metrics.incrementCounter(resolveMetricNameByPixKeyType(aType), 1);
+        this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of(
+                "usecase", "pixkey_create",
+                "pixkey_type", aType.name().toLowerCase()
+        ));
+        this.metrics.recordTime("application_usecase_duration", aDuration, Map.of("usecase", "pixkey_create"));
 
         return CreatePixKeyOutput.from(aPixKey);
-    }
-
-    @Generated
-    private String resolveMetricNameByPixKeyType(final PixKeyType aType) {
-        return switch (aType) {
-            case CPF -> "pixkeys_created_by_type_cpf";
-            case CNPJ -> "pixkeys_created_by_type_cnpj";
-            case EMAIL -> "pixkeys_created_by_type_email";
-            case RANDOM -> "pixkeys_created_by_type_random";
-            default -> "pixkeys_created_by_type_unexpected";
-        };
     }
 }
