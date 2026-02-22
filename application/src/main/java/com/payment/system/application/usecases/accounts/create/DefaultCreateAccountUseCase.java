@@ -30,8 +30,8 @@ public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
             throw new UseCaseInputCannotBeNullException(CreateAccountUseCase.class);
         }
 
-        this.metrics.incrementCounter("operation_requests_total", 1, Map.of(
-                "operation", "account_create"
+        this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of(
+                "usecase", "account_create"
         ));
 
         final var aStartTime = System.currentTimeMillis();
@@ -49,11 +49,11 @@ public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
                 input.userId()
         );
 
-        this.metrics.incrementCounter("operation_processed_total", 1, Map.of(
-                "operation", "account_create"
+        this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of(
+                "usecase", "account_create"
         ));
-        this.metrics.recordTime("operation_latency_ms", aDuration, Map.of(
-                "operation", "account_create"
+        this.metrics.recordTime("application_usecase_duration", aDuration, Map.of(
+                "usecase", "account_create"
         ));
 
         return CreateAccountOutput.from(aAccount);

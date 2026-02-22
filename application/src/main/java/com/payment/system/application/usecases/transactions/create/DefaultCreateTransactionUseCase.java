@@ -62,8 +62,8 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 input.fromAccountId(), input.pixKeyType(), input.amount(), input.idempotencyKey());
 
         try {
-            this.metrics.incrementCounter("operation_requests_total", 1, Map.of(
-                    "operation", "pix_transfer"
+            this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of(
+                    "usecase", "pix_transfer"
             ));
             return this.transactionManager.execute(() -> {
                 if (input.amount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -113,11 +113,11 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
 
-                this.metrics.incrementCounter("operation_processed_total", 1, Map.of(
-                        "operation", "pix_transfer"
+                this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of(
+                        "usecase", "pix_transfer"
                 ));
-                this.metrics.incrementCounter("operation_amount_total", aTransaction.getAmount().amount().longValue(),
-                        Map.of("operation", "pix_transfer"));
+                this.metrics.incrementCounter("transaction_amount_total", aTransaction.getAmount().amount().longValue(),
+                        Map.of("usecase", "pix_transfer"));
 
                 logger.info("event=pix_transfer_completed transactionId={} fromAccountId={} toAccountId={} amount={} idempotencyKey={}",
                         aTransaction.getId().value().toString(),
@@ -149,15 +149,15 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 logger.error("event=pix_transfer_error idempotencyKey={}", input.idempotencyKey(), ex);
             }
 
-            this.metrics.incrementCounter("operation_errors_total", 1, Map.of(
-                    "operation", "pix_transfer",
+            this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
+                    "usecase", "pix_transfer",
                     "error_code", resolveErrorMetric(ex)
             ));
             throw ex;
         } finally {
             final var aDuration = System.currentTimeMillis() - aStartTime;
-            this.metrics.recordTime("operation_latency_ms", aDuration, Map.of(
-                    "operation", "pix_transfer"
+            this.metrics.recordTime("application_usecase_duration", aDuration, Map.of(
+                    "usecase", "pix_transfer"
             ));
         }
     }

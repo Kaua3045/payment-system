@@ -63,7 +63,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 input.pixKeyType(), input.source(), input.amount(), input.idempotencyKey());
 
         try {
-            this.metrics.incrementCounter("operation_requests_total", 1, Map.of("operation", "deposit_create"));
+            this.metrics.incrementCounter("application_usecase_invocations_total", 1, Map.of("usecase", "deposit_create"));
             return this.transactionManager.execute(() -> {
                 if (input.amount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw DomainException.with("Amount must be greater than zero");
@@ -106,7 +106,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
 
-                this.metrics.incrementCounter("operation_processed_total", 1, Map.of("operation", "deposit_create"));
+                this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of("usecase", "deposit_create"));
 
                 logger.info("event=deposit_completed transactionId={} toAccountId={} amount={} idempotencyKey={}",
                         aTransaction.getId().value().toString(),
@@ -137,15 +137,15 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 logger.error("event=deposit_error idempotencyKey={}", input.idempotencyKey(), ex);
             }
 
-            this.metrics.incrementCounter("operation_errors_total", 1, Map.of(
-                    "operation", "deposit_create",
+            this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
+                    "usecase", "deposit_create",
                     "error_code", resolveErrorMetric(ex)
             ));
 
             throw ex;
         } finally {
             final var aDuration = System.currentTimeMillis() - aStartTime;
-            this.metrics.incrementCounter("operation_latency_ms", aDuration, Map.of("operation", "deposit_create"));
+            this.metrics.incrementCounter("application_usecase_duration", aDuration, Map.of("usecase", "deposit_create"));
         }
     }
 
