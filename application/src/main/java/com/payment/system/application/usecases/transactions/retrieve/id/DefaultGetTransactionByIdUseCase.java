@@ -2,6 +2,7 @@ package com.payment.system.application.usecases.transactions.retrieve.id;
 
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.transactions.Transaction;
 
@@ -11,7 +12,8 @@ public class DefaultGetTransactionByIdUseCase extends GetTransactionByIdUseCase 
 
     private final TransactionRepository transactionRepository;
 
-    public DefaultGetTransactionByIdUseCase(final TransactionRepository transactionRepository) {
+    public DefaultGetTransactionByIdUseCase(final TransactionRepository transactionRepository, final ApplicationLogger logger) {
+        super(logger);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
     }
 

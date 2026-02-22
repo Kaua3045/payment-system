@@ -3,6 +3,7 @@ package com.payment.system.application.usecases.pixkeys.create;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.exceptions.DomainException;
@@ -23,8 +24,10 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
     public DefaultCreatePixKeyUseCase(
             final PixKeyRepository pixKeyRepository,
             final AccountRepository accountRepository,
-            final Metrics metrics
+            final Metrics metrics,
+            final ApplicationLogger logger
     ) {
+        super(logger);
         this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
         this.accountRepository = Objects.requireNonNull(accountRepository);
         this.metrics = Objects.requireNonNull(metrics);
@@ -37,6 +40,8 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
         }
 
         final var aStartTime = System.currentTimeMillis();
+
+        logger.info("event=pix_key_create_requested pixKeyType={} accountId={}", input.type(), input.accountId());
 
         final var aExistsKey = this.pixKeyRepository.existsByValue(input.value());
 
@@ -60,6 +65,12 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
         this.pixKeyRepository.save(aPixKey);
 
         final var aDuration = System.currentTimeMillis() - aStartTime;
+
+        logger.info("event=pix_key_create_completed pixKeyId={} pixKeyType={} accountId={}",
+                aPixKey.getId().value().toString(),
+                aPixKey.getKey().type().name(),
+                aPixKey.getAccountId().value().toString()
+        );
 
         this.metrics.incrementCounter("pixkeys_created_total", 1);
         this.metrics.recordTime("pixkeys_created_latency", aDuration);

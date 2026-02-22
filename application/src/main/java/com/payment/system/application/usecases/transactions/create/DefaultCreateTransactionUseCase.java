@@ -1,9 +1,12 @@
 package com.payment.system.application.usecases.transactions.create;
 
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
+import com.payment.system.application.helpers.ErrorClassifier;
+import com.payment.system.application.helpers.ErrorType;
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
@@ -35,8 +38,10 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics
+            final Metrics metrics,
+            final ApplicationLogger logger
     ) {
+        super(logger);
         this.accountRepository = Objects.requireNonNull(accountRepository);
         this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
@@ -51,6 +56,9 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
         }
 
         final var aStartTime = System.currentTimeMillis();
+
+        logger.info("event=pix_transfer_requested fromAccountId={} pixKeyType={} amount={} idempotencyKey={}",
+                input.fromAccountId(), input.pixKeyType(), input.amount(), input.idempotencyKey());
 
         try {
             this.metrics.incrementCounter("pix_transfers_requested", 1);
@@ -104,6 +112,14 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
                 this.metrics.incrementCounter("pix_transfers_processed", 1);
                 this.metrics.incrementCounter("pix_transfers_amount_total", aTransaction.getAmount().amount().longValue());
+
+                logger.info("event=pix_transfer_completed transactionId={} fromAccountId={} toAccountId={} amount={} idempotencyKey={}",
+                        aTransaction.getId().value().toString(),
+                        aFromAccount.getId().value().toString(),
+                        aToAccount.getId().value().toString(),
+                        aTransaction.getAmount().amount(),
+                        aTransaction.getIdempotencyKey()
+                );
                 return CreateTransactionOutput.from(aTransaction);
             });
         } catch (final Exception ex) {
@@ -115,6 +131,17 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         });
                 return null;
             });
+
+            final var aErrorType = ErrorClassifier.classify(ex);
+
+            if (ErrorType.IsBusiness(aErrorType)) {
+                logger.warn("event=pix_transfer_failed reason={} idempotencyKey={}",
+                        ex.getMessage(),
+                        input.idempotencyKey()
+                );
+            } else {
+                logger.error("event=pix_transfer_error idempotencyKey={}", input.idempotencyKey(), ex);
+            }
 
             this.metrics.incrementCounter("pix_transfers_failed", 1);
             this.metrics.incrementCounter(resolveErrorMetric(ex), 1);

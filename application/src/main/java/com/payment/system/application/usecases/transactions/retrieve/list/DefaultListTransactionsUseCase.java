@@ -2,6 +2,7 @@ package com.payment.system.application.usecases.transactions.retrieve.list;
 
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.domain.pagination.Pagination;
 import com.payment.system.domain.pagination.SearchQuery;
 
@@ -11,7 +12,8 @@ public class DefaultListTransactionsUseCase extends ListTransactionsUseCase {
 
     private final TransactionRepository transactionRepository;
 
-    public DefaultListTransactionsUseCase(final TransactionRepository transactionRepository) {
+    public DefaultListTransactionsUseCase(final TransactionRepository transactionRepository, final ApplicationLogger logger) {
+        super(logger);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
     }
 

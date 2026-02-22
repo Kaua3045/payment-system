@@ -13,6 +13,7 @@ import com.payment.system.application.usecases.transactions.retrieve.list.Defaul
 import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
+import com.payment.system.infrastructure.wrapper.Slf4jApplicationLogger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,13 +27,14 @@ public class TransactionUseCaseConfig {
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
             final Metrics metrics
-            ) {
+    ) {
         return new DefaultCreateTransactionUseCase(
                 accountRepository,
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager,
-                 metrics
+                metrics,
+                new Slf4jApplicationLogger(CreateTransactionUseCase.class)
         );
     }
 
@@ -41,7 +43,8 @@ public class TransactionUseCaseConfig {
             final TransactionRepository transactionRepository
     ) {
         return new DefaultGetTransactionByIdUseCase(
-                transactionRepository
+                transactionRepository,
+                new Slf4jApplicationLogger(GetTransactionByIdUseCase.class)
         );
     }
 
@@ -58,7 +61,8 @@ public class TransactionUseCaseConfig {
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager,
-                metrics
+                metrics,
+                new Slf4jApplicationLogger(CreateDepositUseCase.class)
         );
     }
 
@@ -67,7 +71,8 @@ public class TransactionUseCaseConfig {
             final TransactionRepository transactionRepository
     ) {
         return new DefaultListTransactionsUseCase(
-                transactionRepository
+                transactionRepository,
+                new Slf4jApplicationLogger(ListTransactionsUseCase.class)
         );
     }
 }

@@ -2,6 +2,7 @@ package com.payment.system.application.usecases.accounts.retrieve.id;
 
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.repositories.AccountRepository;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.exceptions.NotFoundException;
 
@@ -11,7 +12,8 @@ public class DefaultGetAccountByIdUseCase extends GetAccountByIdUseCase {
 
     private final AccountRepository accountRepository;
 
-    public DefaultGetAccountByIdUseCase(final AccountRepository accountRepository) {
+    public DefaultGetAccountByIdUseCase(final AccountRepository accountRepository, final ApplicationLogger logger) {
+        super(logger);
         this.accountRepository = Objects.requireNonNull(accountRepository);
     }
 
