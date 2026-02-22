@@ -68,6 +68,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ./payment-system-dashboard.json:/var/lib/grafana/dashboards/payment-system-dashboard.json
     ports:
       - "3000:3000"
     depends_on:
@@ -78,7 +81,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
-    command: ["--config=/etc/otel-collector-config.yml"]
+    command: [ "--config=/etc/otel-collector-config.yml" ]
     volumes:
       - ./otel-collector-config.yml:/etc/otel-collector-config.yml
     ports:
