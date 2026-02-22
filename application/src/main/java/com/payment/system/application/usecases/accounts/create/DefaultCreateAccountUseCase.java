@@ -31,11 +31,18 @@ public class DefaultCreateAccountUseCase extends CreateAccountUseCase {
 
         final var aStartTime = System.currentTimeMillis();
 
+        logger.info("event=account_create_requested userId={}", input.userId());
+
         final var aAccount = Account.newAccount(input.userId());
 
         this.accountRepository.save(aAccount);
 
         final var aDuration = System.currentTimeMillis() - aStartTime;
+
+        logger.info("event=account_create_completed accountId={} userId={}",
+                aAccount.getId().value().toString(),
+                input.userId()
+        );
 
         this.metrics.incrementCounter("accounts_created_total", 1);
         this.metrics.recordTime("accounts_created_latency", aDuration);

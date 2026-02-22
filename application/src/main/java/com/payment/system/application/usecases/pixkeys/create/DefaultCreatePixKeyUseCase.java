@@ -41,6 +41,8 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
 
         final var aStartTime = System.currentTimeMillis();
 
+        logger.info("event=pix_key_create_requested pixKeyType={} accountId={}", input.type(), input.accountId());
+
         final var aExistsKey = this.pixKeyRepository.existsByValue(input.value());
 
         if (aExistsKey) {
@@ -63,6 +65,12 @@ public class DefaultCreatePixKeyUseCase extends CreatePixKeyUseCase {
         this.pixKeyRepository.save(aPixKey);
 
         final var aDuration = System.currentTimeMillis() - aStartTime;
+
+        logger.info("event=pix_key_create_completed pixKeyId={} pixKeyType={} accountId={}",
+                aPixKey.getId().value().toString(),
+                aPixKey.getKey().type().name(),
+                aPixKey.getAccountId().value().toString()
+        );
 
         this.metrics.incrementCounter("pixkeys_created_total", 1);
         this.metrics.recordTime("pixkeys_created_latency", aDuration);
