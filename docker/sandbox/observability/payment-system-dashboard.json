@@ -77,7 +77,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(\n  sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\"}[5m]))\n  /\n  sum(rate(http_server_request_duration_seconds_count[5m]))\n) * 100",
+          "expr": "(\n  sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\", deployment_environment=~\"$environment\"}[5m]))\n  /\n  sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$environment\"}[5m]))\n)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -146,7 +146,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(\n  sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m]))\n  /\n  sum(rate(http_server_request_duration_seconds_count[5m]))\n) * 100",
+          "expr": "(\n  sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\", deployment_environment=~\"$environment\"}[5m]))\n  /\n  sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$environment\"}[5m]))\n)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -163,7 +163,41 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -191,21 +225,17 @@
       },
       "id": 1,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "12.1.1",
       "targets": [
@@ -215,14 +245,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_server_request_duration_seconds_count[1m]))",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$environment\"}[1m]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "HTTP RPS",
-      "type": "stat"
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -232,7 +262,40 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -260,34 +323,30 @@
       },
       "id": 4,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "12.1.1",
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(\n  0.99,\n  sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le)\n) * 1000",
+          "expr": "histogram_quantile(\n  0.99,\n  sum(rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$environment\"}[5m])) by (le)\n) * 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "HTTP Latência P99",
-      "type": "stat"
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -297,7 +356,40 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -325,34 +417,30 @@
       },
       "id": 3,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "12.1.1",
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(\n  0.95,\n  sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le)\n) * 1000",
+          "expr": "histogram_quantile(\n  0.95,\n  sum(rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$environment\"}[5m])) by (le)\n) * 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "HTTP Latência P95",
-      "type": "stat"
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -439,7 +527,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(\n  sum(rate(application_usecase_errors_total[5m])) by (usecase)\n  /\n  sum(rate(application_usecase_invocations_total[5m])) by (usecase)\n) * 100",
+          "expr": "(\n  sum(rate(application_usecase_errors_total{deployment_environment=~\"$environment\"}[5m])) by (usecase)\n  /\n  sum(rate(application_usecase_invocations_total{deployment_environment=~\"$environment\"}[5m])) by (usecase)\n) * 100",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -533,7 +621,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(\n  0.95,\n  sum(rate(application_usecase_duration_bucket[5m])) \n  by (le, usecase)\n) * 1000",
+          "expr": "histogram_quantile(\n  0.95,\n  sum(rate(application_usecase_duration_bucket{deployment_environment=~\"$environment\"}[5m])) \n  by (le, usecase)\n)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -562,7 +650,7 @@
               }
             ]
           },
-          "unit": "currency → BRL (R$)"
+          "unit": "BRL (R$)"
         },
         "overrides": []
       },
@@ -594,7 +682,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(transaction_amount_total[1m]))",
+          "expr": "sum(rate(transaction_amount_total{deployment_environment=~\"$environment\"}[1m]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -688,7 +776,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(application_usecase_invocations_total[1m])) by (usecase)",
+          "expr": "sum(rate(application_usecase_invocations_total{deployment_environment=~\"$environment\"}[1m])) by (usecase)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -788,7 +876,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(\n  0.95,\n  sum(\n    rate(http_server_request_duration_seconds_bucket[5m])\n  ) by (le, http_route, http_request_method)\n) * 1000",
+          "expr": "histogram_quantile(\n  0.95,\n  sum(\n    rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$environment\"}[5m])\n  ) by (le, http_route, http_request_method)\n) * 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -849,7 +937,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(increase(transaction_amount_total[1h]))",
+          "expr": "sum(increase(transaction_amount_total{deployment_environment=~\"$environment\"}[1h]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -947,8 +1035,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(\n  sum(jvm_memory_used_bytes{area=\"heap\"})\n  /\n  sum(jvm_memory_max_bytes{area=\"heap\"})\n) * 100",
-          "legendFormat": "__auto",
+          "expr": "(\n  sum(jvm_memory_used_bytes{area=\"heap\", deployment_environment=~\"$environment\"})\n  /\n  sum(jvm_memory_max_bytes{area=\"heap\", deployment_environment=~\"$environment\"})\n) * 100",
+          "legendFormat": "Heap used",
           "range": true,
           "refId": "A"
         }
@@ -1038,7 +1126,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (http_response_status_code)",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$environment\"}[5m])) by (http_response_status_code)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1131,7 +1219,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(hikaricp_connections_timeout_total[5m])",
+          "expr": "rate(hikaricp_connections_timeout_total{deployment_environment=~\"$environment\"}[5m])",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1225,8 +1313,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (pool) (hikaricp_connections_active)",
-          "legendFormat": "__auto",
+          "expr": "sum by (pool) (hikaricp_connections_active{deployment_environment=~\"$environment\"})",
+          "legendFormat": "Active - {{pool}}",
           "range": true,
           "refId": "A"
         },
@@ -1236,10 +1324,10 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pool) (hikaricp_connections_idle)",
+          "expr": "sum by (pool) (hikaricp_connections_idle{deployment_environment=~\"$environment\"})",
           "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Idle - {{pool}}",
           "range": true,
           "refId": "B"
         },
@@ -1249,10 +1337,10 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pool) (hikaricp_connections_max)",
+          "expr": "sum by (pool) (hikaricp_connections_max{deployment_environment=~\"$environment\"})",
           "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Max - {{pool}}",
           "range": true,
           "refId": "C"
         },
@@ -1262,10 +1350,10 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pool) (hikaricp_connections_pending)",
+          "expr": "sum by (pool) (hikaricp_connections_pending{deployment_environment=~\"$environment\"})",
           "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Pending - {{pool}}",
           "range": true,
           "refId": "D"
         },
@@ -1275,10 +1363,10 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pool) (hikaricp_connections_min)",
+          "expr": "sum by (pool) (hikaricp_connections_min{deployment_environment=~\"$environment\"})",
           "hide": false,
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Min - {{pool}}",
           "range": true,
           "refId": "E"
         }
@@ -1465,7 +1553,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "jvm_memory_used_bytes{id=\"Metaspace\"}",
+          "expr": "jvm_memory_used_bytes{id=\"Metaspace\", deployment_environment=~\"$environment\"}",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1559,7 +1647,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(jvm_gc_pause_milliseconds_sum[5m])\n/\nrate(jvm_gc_pause_milliseconds_count[5m])",
+          "expr": "rate(jvm_gc_pause_milliseconds_sum{deployment_environment=~\"$environment\"}[5m])\n/\nrate(jvm_gc_pause_milliseconds_count{deployment_environment=~\"$environment\"}[5m])",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1653,7 +1741,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (id) (\n  jvm_memory_used_bytes{area=\"heap\"}\n)",
+          "expr": "sum by (id) (\n  jvm_memory_used_bytes{area=\"heap\", deployment_environment=~\"$environment\"}\n)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1747,7 +1835,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (gc) (\n  rate(jvm_gc_pause_milliseconds_count[5m])\n)",
+          "expr": "sum by (gc) (\n  rate(jvm_gc_pause_milliseconds_count{deployment_environment=~\"$environment\"}[5m])\n)",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1808,7 +1896,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "process_uptime_milliseconds",
+          "expr": "process_uptime_milliseconds{deployment_environment=~\"$environment\"}",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -1898,7 +1986,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "jvm_threads_live",
+          "expr": "jvm_threads_live{deployment_environment=~\"$environment\"}",
           "legendFormat": "Live Threads",
           "range": true,
           "refId": "A"
@@ -1909,7 +1997,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "jvm_threads_daemon",
+          "expr": "jvm_threads_daemon{deployment_environment=~\"$environment\"}",
           "hide": false,
           "instant": false,
           "legendFormat": "Daemon Threads",
@@ -1922,7 +2010,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "jvm_threads_peak",
+          "expr": "jvm_threads_peak{deployment_environment=~\"$environment\"}",
           "hide": false,
           "instant": false,
           "legendFormat": "Peak Threads",
@@ -1935,7 +2023,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (state) (\n  jvm_threads_states\n)",
+          "expr": "sum by (state) (\n  jvm_threads_states{deployment_environment=~\"$environment\"}\n)",
           "hide": false,
           "instant": false,
           "legendFormat": "{{state}}",
@@ -1951,7 +2039,28 @@
   "schemaVersion": 41,
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "dev",
+          "value": "dev"
+        },
+        "definition": "label_values(http_server_request_duration_seconds_count,deployment_environment)",
+        "description": "",
+        "label": "Environment",
+        "name": "environment",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(http_server_request_duration_seconds_count,deployment_environment)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-5m",
