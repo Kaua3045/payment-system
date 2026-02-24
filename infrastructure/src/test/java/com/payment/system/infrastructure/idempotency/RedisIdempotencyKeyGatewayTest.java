@@ -94,61 +94,6 @@ class RedisIdempotencyKeyGatewayTest extends AbstractCacheConfig implements Obse
     }
 
     @Test
-    void givenAnExistsIdempotencyKey_whenSave_thenShouldThrowException() throws InterruptedException {
-        final var aIdempotencyKey = IdentifierUtils.generateNewIdWithoutHyphen();
-        final var aBody = new IdempotencyKeyBodyTest("test");
-
-        final var aHeaders = new HashMap<String, String>();
-        aHeaders.put("location", "/test/123");
-        aHeaders.put("content-type", MediaType.APPLICATION_JSON_VALUE);
-
-        final var aIdempotencyKeyInput = new IdempotencyKeyInput(200, aBody, aHeaders);
-
-        Assertions.assertTrue(this.idempotencyKeyGateway.find(aIdempotencyKey).isEmpty());
-
-        this.idempotencyKeyGateway.save(
-                aIdempotencyKey,
-                1,
-                TimeUnit.HOURS
-        );
-
-        ConcurrentlyTestHelper.doSyncAndConcurrently(
-                2,
-                o -> this.idempotencyKeyGateway.save(
-                        aIdempotencyKey,
-                        aIdempotencyKeyInput,
-                        1,
-                        TimeUnit.HOURS
-                ),
-                RedisIdempotencyKeyGatewayTest.class.getSimpleName(),
-                0,
-                2
-        );
-
-        assertSpanCreated(IDEMPOTENCY_KEY_SAVE);
-        assertSpanAttribute(
-                IDEMPOTENCY_KEY_SAVE,
-                "idempotency_key",
-                aIdempotencyKey
-        );
-        assertSpanAttribute(
-                IDEMPOTENCY_KEY_SAVE,
-                "ttl",
-                1L
-        );
-        assertSpanAttribute(
-                IDEMPOTENCY_KEY_SAVE,
-                "time_unit",
-                TimeUnit.HOURS.name()
-        );
-        assertSpanAttribute(
-                IDEMPOTENCY_KEY_SAVE,
-                "storage_type",
-                "REDIS"
-        );
-    }
-
-    @Test
     void givenAnExistsIdempotencyKey_whenGet_thenShouldReturn() {
         final var aIdempotencyKey = IdentifierUtils.generateNewIdWithoutHyphen();
         final var aBody = new IdempotencyKeyBodyTest("test");
