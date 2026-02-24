@@ -81,6 +81,11 @@ management:
       enable-all: true
       distribution:
         percentiles-histogram:
+          hikaricp:
+            connections:
+              acquire: true
+              usage: true
+              creation: true
           http:
             server:
               requests: true
