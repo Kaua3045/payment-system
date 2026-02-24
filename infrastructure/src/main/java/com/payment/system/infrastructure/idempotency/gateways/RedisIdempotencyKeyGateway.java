@@ -51,7 +51,7 @@ public class RedisIdempotencyKeyGateway implements IdempotencyKeyGateway {
                     );
 
                     if (!Boolean.TRUE.equals(aSetResult)) {
-                        throw new IdempotencyKeyAlreadyExistsException();
+                        throw new IdempotencyKeyAlreadyExistsException(idempotencyKey);
                     }
 
                     log.info("Idempotency key saved: {}", aKey);
@@ -86,7 +86,7 @@ public class RedisIdempotencyKeyGateway implements IdempotencyKeyGateway {
                     );
 
                     if (!Boolean.TRUE.equals(aSetResult)) {
-                        throw new IdempotencyKeyAlreadyExistsException();
+                        throw new IdempotencyKeyAlreadyExistsException(idempotencyKey);
                     }
 
                     log.info("Idempotency key saved with body {}", aKey);

@@ -6,7 +6,7 @@ import java.util.Collections;
 
 public class IdempotencyKeyAlreadyExistsException extends DomainException {
 
-    public IdempotencyKeyAlreadyExistsException() {
-        super("Idempotency key already exists", Collections.emptyList());
+    public IdempotencyKeyAlreadyExistsException(final String aIdempotencyKey) {
+        super("Idempotency key already exists %s".formatted(aIdempotencyKey), Collections.emptyList());
     }
 }
