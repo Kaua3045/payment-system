@@ -1,8 +1,12 @@
 package com.payment.system.domain.utils;
 
+import com.github.f4b6a3.ulid.Ulid;
+import com.github.f4b6a3.ulid.UlidCreator;
+
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
+// TODO alta carga na mesma app o ULID nao ta aguentando, nem monotonic
 public final class IdentifierUtils {
 
     private IdentifierUtils() {}
@@ -19,12 +23,20 @@ public final class IdentifierUtils {
         return UUID.randomUUID();
     }
 
-    public static ULID generateNewULID() {
-        return ULID.random();
+//    public static ULID generateNewULID() {
+//        return ULID.random();
+//    }
+//
+//    public static ULID generateNewMonotonicULID() {
+//        return MonotonicULID.random();
+//    }
+
+    public static Ulid generateNewULID() {
+        return UlidCreator.getUlid();
     }
 
-    public static ULID generateNewMonotonicULID() {
-        return MonotonicULID.random();
+    public static Ulid generateNewMonotonicULID() {
+        return UlidCreator.getMonotonicUlid();
     }
 
     public static byte[] getUUIDAsBytes(UUID uuid) {

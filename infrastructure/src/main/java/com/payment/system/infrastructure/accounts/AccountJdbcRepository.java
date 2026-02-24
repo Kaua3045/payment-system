@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.accounts;
 
+import com.github.f4b6a3.ulid.Ulid;
 import com.payment.system.application.repositories.AccountRepository;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
@@ -107,7 +108,7 @@ public class AccountJdbcRepository implements AccountRepository {
 
     private RowMap<Account> accountMapper() {
         return rs -> Account.with(
-                new AccountId(ULID.fromString(rs.getString("id"))),
+                new AccountId(Ulid.from(rs.getString("id"))),
                 rs.getLong("version"),
                 rs.getString("user_id"),
                 new Money(rs.getBigDecimal("balance")),

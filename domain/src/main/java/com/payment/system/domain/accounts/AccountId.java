@@ -1,9 +1,9 @@
 package com.payment.system.domain.accounts;
 
+import com.github.f4b6a3.ulid.Ulid;
 import com.payment.system.domain.Identifier;
-import com.payment.system.domain.utils.ULID;
 
-public record AccountId(ULID value) implements Identifier<ULID> {
+public record AccountId(Ulid value) implements Identifier<Ulid> {
 
     private static final String SYSTEM_ULID = "01HZZZZZZZZZZZZZZZZZZZZZZZ";
 
@@ -12,10 +12,10 @@ public record AccountId(ULID value) implements Identifier<ULID> {
     }
 
     public static AccountId system() {
-        return new AccountId(ULID.fromString(SYSTEM_ULID));
+        return new AccountId(Ulid.from(SYSTEM_ULID));
     }
 
     public boolean isSystem() {
-        return ULID.fromString(SYSTEM_ULID).equals(this.value());
+        return Ulid.from(SYSTEM_ULID).equals(this.value());
     }
 }
