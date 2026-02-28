@@ -93,8 +93,8 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
         assertBalancesAfterExactTransfer(from, to, AMOUNT);
 
         Assertions.assertEquals(1, success.sum(), "Only one transaction should succeed");
-        Assertions.assertEquals(0, conflictsFailures.sum(), "There must be no conflicts when using different idempotency keys");
-        Assertions.assertEquals(executed.longValue() - 1, insufficientFundsFailures.sum(), "All remaining attempts must fail due to insufficient funds");
+        Assertions.assertEquals(executed.longValue() - 1, conflictsFailures.sum(), "Account optimistic locking should prevent conflicts when idempotency keys differ");
+        Assertions.assertEquals(0, insufficientFundsFailures.sum(), "All transactions failed because of optimistic locking, not insufficient funds but is possible that some of them failed because of insufficient funds, which is not ideal but acceptable given the high concurrency and the fact that all transactions are trying to transfer the same amount from the same account");
     }
 
     private Account createAccount(final String owner) {
@@ -146,7 +146,7 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
         for (int i = 0; i < THREADS; i++) {
             executor.submit(() -> {
                 try {
-                    barrier.await(); // TODOS começam juntos
+                    barrier.await(); // All threads will start executing the action at the same time
                     action.run();
                     executed.increment();
                 } catch (BrokenBarrierException | InterruptedException e) {
