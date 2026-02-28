@@ -6,7 +6,7 @@ services:
     networks:
       - observability
     volumes:
-      - ./files:/tests
+      - ../scripts:/tests
 
 networks:
   observability:
