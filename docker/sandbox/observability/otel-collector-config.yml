@@ -1,4 +1,14 @@
 receivers:
+  postgresql:
+    endpoint: postgresql:5432
+    transport: tcp
+    username: postgres
+    password: postgres
+    databases:
+      - payment-system
+    collection_interval: 10s
+    tls:
+      insecure: true
   otlp:
     protocols:
       grpc:
@@ -88,9 +98,9 @@ service:
     traces:
       receivers: [otlp]
       processors: [filter/spans-to-drop, transform/traces]
-      exporters: [debug, elasticsearch]
+      exporters: [elasticsearch]
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, postgresql]
       processors: [batch, resource]
       exporters: [prometheus]
     logs: # https://www.elastic.co/observability-labs/blog/logstash-to-otel
