@@ -13,3 +13,9 @@ CREATE TABLE transactions (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
+
+CREATE INDEX idx_transactions_from_account
+ON transactions (from_account_id);
+
+CREATE INDEX idx_transactions_to_account
+ON transactions (to_account_id);
