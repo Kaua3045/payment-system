@@ -24,6 +24,7 @@ Um sistema estilo banco, para processamento de pagamentos, com criação de cont
 
 - [Arquitetura](#arquitetura)
 - [Requsitos para rodar o projeto](#requisitos)
+- [Performance](#performance)
 - [Instruções para executar o projeto](#instruções-para-executar-o-projeto)
 - [Contribua com o projeto](#contribuindo-com-o-projeto)
 - [Changelog](#changelog)
@@ -41,6 +42,20 @@ Um sistema estilo banco, para processamento de pagamentos, com criação de cont
 *Application, é a camada que contem todos os casos de uso (criar um usuário, pegar um usuário pelo id, atualizar um usuário, deletar um usuário, esse é famoso CRUD) e contem a integração com o gateway do banco de dados*
 
 *Infrastructure, é a camada responsável por conectar tudo, o usuário com a application e domain layer, contem a conexão com o banco de dados, entidades do banco e as rotas*
+
+## Performance
+Foram realizados testes de carga para avaliar o comportamento do sistema sob alta concorrência utilizando **k6**.
+
+### Spike Test
+- Até **500 usuários concorrentes**
+- Aproximadamente **580 requisições por segundo**
+- Métricas coletadas via **Grafana e OpenTelemetry**
+- Monitoramento de **PostgreSQL e HikariCP**
+- Validação de consistência com **optimistic locking**
+
+Relatório completo de performance:
+[Spike Test de Transferências](doc/performance/spike-transfer.md)
+
 
 ## Requisitos para rodar o projeto
 
