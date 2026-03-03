@@ -6,6 +6,7 @@ import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.utils.InstantUtils;
+import com.payment.system.infrastructure.exceptions.ConflictException;
 import com.payment.system.infrastructure.exceptions.IdempotencyKeyUnsupportedMethodException;
 import com.payment.system.infrastructure.utils.ApiError;
 import org.slf4j.Logger;
@@ -66,6 +67,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleInternalErrorException(final InternalErrorException ex) {
         log.error("Handling internal error exception: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiError.from(ex.getMessage(), InstantUtils.now()));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiError> handleConflictException(final ConflictException ex) {
+        log.debug("Handling conflict exception: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.from(ex.getMessage(), InstantUtils.now()));
     }
 }
