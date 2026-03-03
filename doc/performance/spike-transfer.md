@@ -237,3 +237,18 @@ Avaliar:
 ```text
 server.tomcat.threads.max
 ```
+
+## Evidência por trace (Tempo/Jaeger)
+![Trace 300ms success](../imagens/trace-300ms.png)
+- Trace POST /api/v1/transactions com ~325ms total.
+- Spans de banco (SELECT/INSERT/UPDATE) ficaram em sub-ms a poucos ms, indicando que não há query lenta.
+- A diferença entre duração total e tempo somado dos spans sugere tempo predominante em espera de recurso.
+- Em traces mais lentos (>400ms), ocorreu CannotGetJdbcConnectionException / timeout de Hikari, confirmando contenção no pool de conexões como causa principal da latência.
+
+## Por que isso aconteceu?
+- Pool = 20 conexões
+- Carga = centenas de requests concorrentes
+- Cada request precisa de DB e segura conexão por algum tempo (mesmo que pouco)
+- Quando chega perto do limite, forma fila -> latência sobe -> p95 vai pra ~500ms
+- Como seu acquire timeout é 250ms, parte dessa fila vira erro, não só latência
+
