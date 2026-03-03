@@ -56,6 +56,13 @@ Foram realizados testes de carga para avaliar o comportamento do sistema sob alt
 Relatório completo de performance:
 [Spike Test de Transferências](doc/performance/spike-transfer.md)
 
+### Capacity Test
+- Métricas coletadas via **Grafana e OpenTelemetry**
+- Monitoramento de **PostgreSQL e HikariCP**
+- Capacidade aproximada: **350-410 it/s** (800 RPS no mix deposit+transfer)
+
+Relatório completo de performance:
+[Capacity Test de Transferências](doc/performance/capacity-transfer.md)
 
 ## Requisitos para rodar o projeto
 
