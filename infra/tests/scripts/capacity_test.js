@@ -20,8 +20,8 @@ export const options = {
         { duration: "30s", target: 200 },
         { duration: "1m",  target: 200 },
 
-        { duration: "30s", target: 350 },
-        { duration: "1m",  target: 350 },
+        { duration: "30s", target: 330 },
+        { duration: "1m",  target: 330 },
 
         { duration: "30s", target: 400 }, // TODO: 400 target db connections timeout
         { duration: "1m",  target: 400 },
