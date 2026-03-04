@@ -46,6 +46,17 @@ Um sistema estilo banco, para processamento de pagamentos, com criação de cont
 ## Performance
 Foram realizados testes de carga para avaliar o comportamento do sistema sob alta concorrência utilizando **k6**.
 
+### Performance & Reliability Report
+- Cenário: Transferências Pix
+- Ambiente: Local (Docker) com PostgreSQL e HikariCP
+- Métricas: Grafana + OpenTelemetry
+- Resultados:
+- Capacidade sustentável: **330 it/s** (800 RPS no mix deposit+transfer)
+- Ponto de saturação: **400 it/s** (pool de conexões)
+
+Relatório completo de performance:
+[Performance & Reliability Report](doc/performance/performance-and-reliability-report.md)
+
 ### Spike Test
 - Até **500 usuários concorrentes**
 - Aproximadamente **580 requisições por segundo**
