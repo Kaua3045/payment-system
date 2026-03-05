@@ -107,6 +107,8 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 this.transactionRepository.save(aTransaction);
 
                 this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of("usecase", "deposit_create"));
+                this.metrics.incrementCounter("transaction_amount_total", aTransaction.getAmount().amount().longValue(),
+                        Map.of("usecase", "deposit_create"));
 
                 logger.info("event=deposit_completed transactionId={} toAccountId={} amount={} idempotencyKey={}",
                         aTransaction.getId().value().toString(),

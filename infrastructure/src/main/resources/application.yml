@@ -19,10 +19,12 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
     min-response-size: 1024
-  undertow:
+  tomcat:
     threads:
-      worker: 64
-      io: 4
+      max: 64 # like a worker thread pool in undertow, pool for handling requests
+      min-spare: 10
+    accept-count: 200 # like a queue for incoming requests, if all worker threads are busy, new requests will be queued up to this limit
+    max-connections: 10000 # like a connection pool for handling incoming connections, if all worker threads are busy and the accept-count queue is full, new connections will be rejected up to this limit (keep-alive)
 
 spring:
   threads:
@@ -36,7 +38,7 @@ spring:
     password: ${postgres.password}
     hikari:
       auto-commit: false
-      connection-timeout: 250
+      connection-timeout: 2000
       max-lifetime: 600000
       maximum-pool-size: 20
       minimum-idle: 10
@@ -81,6 +83,11 @@ management:
       enable-all: true
       distribution:
         percentiles-histogram:
+          hikaricp:
+            connections:
+              acquire: true
+              usage: true
+              creation: true
           http:
             server:
               requests: true

@@ -65,6 +65,8 @@ public class TransactionRestController implements TransactionAPI {
 
         final var aOutput = this.createTransactionUseCase.execute(aCommand);
 
+        log.debug("Transaction created successfully: {}", aOutput);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CreateTransactionResponse.from(aOutput));

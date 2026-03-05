@@ -1,0 +1,3 @@
+FROM grafana/k6:1.6.1
+WORKDIR /tests
+ENTRYPOINT ["k6", "run"]

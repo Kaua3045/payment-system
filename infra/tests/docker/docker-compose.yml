@@ -1,0 +1,13 @@
+services:
+  k6:
+    build:
+      context: .
+      dockerfile: Dockerfile.k6
+    networks:
+      - observability
+    volumes:
+      - ../scripts:/tests
+
+networks:
+  observability:
+    external: true

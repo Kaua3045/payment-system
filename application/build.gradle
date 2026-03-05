@@ -7,6 +7,7 @@ group = 'com.payment.system.application'
 
 dependencies {
     implementation(project(':domain'))
+    implementation 'com.github.f4b6a3:ulid-creator:5.2.3'
 
     testImplementation(project(path: ':domain', configuration: 'testClasses'))
 }

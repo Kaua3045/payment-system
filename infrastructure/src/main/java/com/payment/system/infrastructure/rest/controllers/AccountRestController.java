@@ -42,6 +42,8 @@ public class AccountRestController implements AccountAPI {
 
         final var aOutput = this.createAccountUseCase.execute(aCommand);
 
+        log.debug("Create account request processed successfully: {}", aOutput);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CreateAccountResponse.from(aOutput));

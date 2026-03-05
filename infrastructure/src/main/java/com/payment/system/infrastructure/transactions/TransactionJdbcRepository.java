@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.transactions;
 
+import com.github.f4b6a3.ulid.Ulid;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.DomainException;
@@ -244,11 +245,11 @@ public class TransactionJdbcRepository implements TransactionRepository {
 
     private RowMap<Transaction> transactionMapper() {
         return rs -> Transaction.with(
-                new TransactionId(ULID.fromString(rs.getString("id"))),
+                new TransactionId(Ulid.from(rs.getString("id"))),
                 rs.getLong("version"),
-                new AccountId(ULID.fromString(rs.getString("from_account_id"))),
-                new AccountId(ULID.fromString(rs.getString("to_account_id"))),
-                new PixKeyId(ULID.fromString(rs.getString("pix_key_id"))),
+                new AccountId(Ulid.from(rs.getString("from_account_id"))),
+                new AccountId(Ulid.from(rs.getString("to_account_id"))),
+                new PixKeyId(Ulid.from(rs.getString("pix_key_id"))),
                 new Money(rs.getBigDecimal("amount")),
                 TransactionStatus.from(rs.getString("status")).orElse(null),
                 TransactionType.from(rs.getString("type")).orElse(null),

@@ -51,7 +51,7 @@ public class RedisIdempotencyKeyGateway implements IdempotencyKeyGateway {
                     );
 
                     if (!Boolean.TRUE.equals(aSetResult)) {
-                        throw new IdempotencyKeyAlreadyExistsException();
+                        throw new IdempotencyKeyAlreadyExistsException(idempotencyKey);
                     }
 
                     log.info("Idempotency key saved: {}", aKey);
@@ -78,16 +78,12 @@ public class RedisIdempotencyKeyGateway implements IdempotencyKeyGateway {
                             body.headers()
                     );
 
-                    final var aSetResult = this.redisTemplate.opsForValue().setIfAbsent(
+                    this.redisTemplate.opsForValue().set(
                             aKey,
                             Json.writeValueAsBytes(aDTO),
                             ttl,
                             timeUnit
                     );
-
-                    if (!Boolean.TRUE.equals(aSetResult)) {
-                        throw new IdempotencyKeyAlreadyExistsException();
-                    }
 
                     log.info("Idempotency key saved with body {}", aKey);
                 }

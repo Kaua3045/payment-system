@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.pixkeys;
 
+import com.github.f4b6a3.ulid.Ulid;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.NotFoundException;
@@ -184,12 +185,12 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
                     .orElseThrow(() -> NotFoundException.with("PixKeyType %s not found".formatted(aType)));
 
             return PixKey.with(
-                    new PixKeyId(ULID.fromString(rs.getString("id"))),
+                    new PixKeyId(Ulid.from(rs.getString("id"))),
                     rs.getLong("version"),
                     new PixKeyValueFactory().create(
                             aPixKeyType,
                             rs.getString("key_value")),
-                    new AccountId(ULID.fromString(rs.getString("account_id"))),
+                    new AccountId(Ulid.from(rs.getString("account_id"))),
                     PixKeyStatus.from(rs.getString("status")).orElse(null),
                     JdbcUtils.getInstant(rs, "created_at"),
                     JdbcUtils.getInstant(rs, "updated_at"),

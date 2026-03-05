@@ -50,6 +50,8 @@ public class PixKeyRestController implements PixKeyAPI {
 
         final var aOutput = this.createPixKeyUseCase.execute(aCommand);
 
+        log.debug("Pix key created successfully: {}", aOutput);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CreatePixKeyResponse.from(aOutput));

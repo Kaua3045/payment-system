@@ -71,6 +71,7 @@ services:
       - ./datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
       - ./dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
       - ./payment-system-dashboard.json:/var/lib/grafana/dashboards/payment-system-dashboard.json
+      - ./database-dashboard.json:/var/lib/grafana/dashboards/database-dashboard.json
     ports:
       - "3000:3000"
     depends_on:
