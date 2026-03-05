@@ -3,7 +3,7 @@ package com.payment.system.infrastructure.accounts;
 import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.exceptions.ValidationException;
-import com.payment.system.infrastructure.exceptions.ConflictException;
+import com.payment.system.domain.exceptions.ConflictException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.jdbc.Sql;

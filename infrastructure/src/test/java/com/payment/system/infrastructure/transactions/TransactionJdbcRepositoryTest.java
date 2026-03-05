@@ -11,7 +11,7 @@ import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.utils.Period;
 import com.payment.system.domain.valueobjects.Money;
-import com.payment.system.infrastructure.exceptions.ConflictException;
+import com.payment.system.domain.exceptions.ConflictException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.jdbc.Sql;

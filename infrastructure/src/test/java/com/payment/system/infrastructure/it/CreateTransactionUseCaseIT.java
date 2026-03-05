@@ -12,7 +12,7 @@ import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.valueobjects.Money;
-import com.payment.system.infrastructure.exceptions.ConflictException;
+import com.payment.system.domain.exceptions.ConflictException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
