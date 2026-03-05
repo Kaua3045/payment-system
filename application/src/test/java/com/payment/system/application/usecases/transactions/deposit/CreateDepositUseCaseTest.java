@@ -9,6 +9,7 @@ import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
+import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
@@ -295,5 +296,44 @@ class CreateDepositUseCaseTest extends UseCaseTest {
         Assertions.assertEquals("teste", aException.getMessage());
 
         Mockito.verify(transactionRepository, Mockito.atLeast(1)).save(any(Transaction.class));
+    }
+
+    @Test
+    void givenAnConflictingVersion_whenExecute_shouldThrowConflictException() {
+        final var toAccount = Account.newAccount("user-5678");
+
+        final var pixKey = PixKey.newPixKey(
+                new PixKeyValueFactory().create(PixKeyType.RANDOM, IdentifierUtils.generateNewId()),
+                toAccount.getId()
+        );
+
+        final var aSource = "atm";
+        final var idempotencyKey = "idem-conflict";
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyRepository.pixKeyOfActiveByValue(any()))
+                .thenReturn(Optional.of(pixKey));
+
+        Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
+                .thenReturn(Optional.of(toAccount));
+
+        Mockito.when(accountRepository.save(any()))
+                .thenThrow(ConflictException.with("Version conflict"));
+
+        final var command = CreateDepositCommand.with(
+                pixKey.getKey().value(),
+                pixKey.getKey().type().name(),
+                aSource,
+                BigDecimal.TEN,
+                idempotencyKey
+        );
+
+        final var aException = Assertions.assertThrows(ConflictException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Version conflict", aException.getMessage());
+
+        Mockito.verify(accountRepository, Mockito.times(1)).save(any());
     }
 }

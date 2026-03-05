@@ -9,6 +9,7 @@ import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
+import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
@@ -353,5 +354,46 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
 
         Mockito.verify(transactionRepository, Mockito.atLeast(2)).save(any(Transaction.class));
+    }
+
+    @Test
+    void givenAnConflictingVersion_whenExecute_shouldThrowsConflictException() {
+        final var fromAccount = Account.newAccount("user-1234");
+        fromAccount.credit(BigDecimal.TEN);
+
+        final var toAccount = Account.newAccount("user-6789");
+        final var pixKey = PixKey.newPixKey(
+                new PixKeyValueFactory().create(PixKeyType.RANDOM, IdentifierUtils.generateNewId()),
+                toAccount.getId()
+        );
+
+        final var idempotencyKey = "idem-conflict";
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(accountRepository.accountOfId(fromAccount.getId().value().toString()))
+                .thenReturn(Optional.of(fromAccount));
+
+        Mockito.when(pixKeyRepository.pixKeyOfActiveByValue(any()))
+                .thenReturn(Optional.of(pixKey));
+
+        Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
+                .thenReturn(Optional.of(toAccount));
+
+        Mockito.when(accountRepository.save(any(Account.class)))
+                .thenThrow(ConflictException.with("Version conflict"));
+
+        final var command = CreateTransactionCommand.with(
+                fromAccount.getId().value().toString(),
+                pixKey.getKey().value(),
+                pixKey.getKey().type().name(),
+                BigDecimal.TEN,
+                idempotencyKey
+        );
+
+        final var aException = Assertions.assertThrows(ConflictException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Version conflict", aException.getMessage());
     }
 }
