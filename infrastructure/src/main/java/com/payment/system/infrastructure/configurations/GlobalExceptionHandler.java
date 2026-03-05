@@ -6,7 +6,7 @@ import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.utils.InstantUtils;
-import com.payment.system.infrastructure.exceptions.ConflictException;
+import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.infrastructure.exceptions.IdempotencyKeyUnsupportedMethodException;
 import com.payment.system.infrastructure.utils.ApiError;
 import org.slf4j.Logger;
