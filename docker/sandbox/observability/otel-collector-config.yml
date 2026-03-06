@@ -19,6 +19,10 @@ receivers:
 exporters:
   debug:
     verbosity: detailed
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
   otlp/jaeger:
     endpoint: jaeger:4317
     tls:
@@ -98,7 +102,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [filter/spans-to-drop, transform/traces]
-      exporters: [elasticsearch]
+      exporters: [elasticsearch, otlp/tempo]
     metrics:
       receivers: [otlp, postgresql]
       processors: [batch, resource]
