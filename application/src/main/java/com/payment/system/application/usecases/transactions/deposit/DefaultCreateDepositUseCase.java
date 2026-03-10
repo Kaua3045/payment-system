@@ -12,6 +12,7 @@ import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
+import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
@@ -119,6 +120,18 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 return CreateDepositOutput.from(aTransaction);
             });
         } catch (final Exception ex) {
+            if (ex instanceof ConflictException conflictException) {
+                logger.warn("event=deposit_conflict reason={} idempotencyKey={}",
+                        conflictException.getMessage(),
+                        input.idempotencyKey()
+                );
+                this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
+                        "usecase", "deposit_create",
+                        "error_code", "conflict_version_or_idempotency_key"
+                ));
+                throw conflictException;
+            }
+
             this.transactionManager.execute(() -> {
                 this.transactionRepository.transactionOfIdempotencyKey(input.idempotencyKey())
                         .ifPresent(tx -> {

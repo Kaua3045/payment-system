@@ -9,6 +9,7 @@ import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
+import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
@@ -91,7 +92,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
         Mockito.verify(accountRepository, Mockito.times(2)).accountOfId(any());
         Mockito.verify(pixKeyRepository, Mockito.times(1)).pixKeyOfActiveByValue(any());
-        Mockito.verify(transactionRepository, Mockito.times(2)).save(any());
+        Mockito.verify(transactionRepository, Mockito.times(1)).save(any());
     }
 
     @Test
@@ -305,7 +306,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     }
 
     @Test
-    void givenErrorAfterTransactionCreation_whenExecute_shouldMarkTransactionAsFailed() {
+    void givenErrorAfterTransactionCreation_whenExecute_shouldThrows() {
         final var fromAccount = Account.newAccount("user-1234");
         fromAccount.credit(BigDecimal.ONE);
 
@@ -334,12 +335,6 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
                 .thenReturn(Optional.of(toAccount));
 
-        Mockito.when(transactionRepository.save(transactionCaptor.capture()))
-                .thenAnswer(returnsFirstArg());
-
-        Mockito.when(transactionRepository.transactionOfIdempotencyKey(idempotencyKey))
-                .thenAnswer(inv -> Optional.of(transactionCaptor.getValue()));
-
         final var command = CreateTransactionCommand.with(
                 fromAccount.getId().value().toString(),
                 pixKey.getKey().value(),
@@ -352,6 +347,47 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
 
-        Mockito.verify(transactionRepository, Mockito.atLeast(2)).save(any(Transaction.class));
+        Mockito.verify(transactionRepository, Mockito.atLeast(0)).save(any(Transaction.class));
+    }
+
+    @Test
+    void givenAnConflictingVersion_whenExecute_shouldThrowsConflictException() {
+        final var fromAccount = Account.newAccount("user-1234");
+        fromAccount.credit(BigDecimal.TEN);
+
+        final var toAccount = Account.newAccount("user-6789");
+        final var pixKey = PixKey.newPixKey(
+                new PixKeyValueFactory().create(PixKeyType.RANDOM, IdentifierUtils.generateNewId()),
+                toAccount.getId()
+        );
+
+        final var idempotencyKey = "idem-conflict";
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(accountRepository.accountOfId(fromAccount.getId().value().toString()))
+                .thenReturn(Optional.of(fromAccount));
+
+        Mockito.when(pixKeyRepository.pixKeyOfActiveByValue(any()))
+                .thenReturn(Optional.of(pixKey));
+
+        Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
+                .thenReturn(Optional.of(toAccount));
+
+        Mockito.doThrow(ConflictException.with("Version conflict"))
+                .when(accountRepository).applyTransfer(any(Account.class), any(Account.class));
+
+        final var command = CreateTransactionCommand.with(
+                fromAccount.getId().value().toString(),
+                pixKey.getKey().value(),
+                pixKey.getKey().type().name(),
+                BigDecimal.TEN,
+                idempotencyKey
+        );
+
+        final var aException = Assertions.assertThrows(ConflictException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Version conflict", aException.getMessage());
     }
 }

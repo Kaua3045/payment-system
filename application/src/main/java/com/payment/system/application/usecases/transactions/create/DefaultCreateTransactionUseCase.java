@@ -11,6 +11,7 @@ import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountStatus;
+import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
@@ -102,13 +103,10 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         input.idempotencyKey()
                 );
 
-                this.transactionRepository.save(aTransaction);
-
                 aFromAccount.debit(input.amount());
                 aToAccount.credit(input.amount());
 
-                this.accountRepository.save(aFromAccount);
-                this.accountRepository.save(aToAccount);
+                this.accountRepository.applyTransfer(aFromAccount, aToAccount);
 
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
@@ -129,14 +127,17 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 return CreateTransactionOutput.from(aTransaction);
             });
         } catch (final Exception ex) {
-            this.transactionManager.execute(() -> {
-                this.transactionRepository.transactionOfIdempotencyKey(input.idempotencyKey())
-                        .ifPresent(tx -> {
-                            tx.fail(ex.getMessage());
-                            this.transactionRepository.save(tx);
-                        });
-                return null;
-            });
+            if (ex instanceof ConflictException conflictException) {
+                logger.warn("event=pix_transfer_conflict reason={} idempotencyKey={}",
+                        conflictException.getMessage(),
+                        input.idempotencyKey()
+                );
+                this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
+                        "usecase", "pix_transfer",
+                        "error_code", "conflict_version_or_idempotency_key"
+                ));
+                throw conflictException;
+            }
 
             final var aErrorType = ErrorClassifier.classify(ex);
 

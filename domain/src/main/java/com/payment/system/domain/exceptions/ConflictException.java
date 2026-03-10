@@ -1,6 +1,5 @@
-package com.payment.system.infrastructure.exceptions;
+package com.payment.system.domain.exceptions;
 
-import com.payment.system.domain.exceptions.NoStackTraceException;
 import com.payment.system.domain.validation.Error;
 
 import java.util.Collections;

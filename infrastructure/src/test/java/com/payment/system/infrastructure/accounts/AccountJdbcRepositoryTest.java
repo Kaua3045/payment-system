@@ -3,7 +3,8 @@ package com.payment.system.infrastructure.accounts;
 import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.exceptions.ValidationException;
-import com.payment.system.infrastructure.exceptions.ConflictException;
+import com.payment.system.domain.exceptions.ConflictException;
+import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.jdbc.Sql;
@@ -132,5 +133,58 @@ class AccountJdbcRepositoryTest extends AbstractRepositoryTest {
                 () -> aAccountRepositoryVariable.save(aAccount));
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void givenAValidExistsAccount_whenCallApplyTransferButVersionIsNotMatch_thenThrowsConflictException() {
+        Assertions.assertEquals(0, countAccounts());
+
+        final var aUserId = "user-123";
+
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var aSavedAccount = this.accountRepository().save(aAccount);
+        final var aToAccount = this.accountRepository().save(Account.newAccount("user-456"));
+
+        final var expectedErrorMessage = "Optimistic lock failure on transfer, one of the accounts was updated by another transaction";
+
+        Assertions.assertEquals(2, countAccounts());
+
+        aSavedAccount.credit(BigDecimal.TEN);
+        aSavedAccount.incrementVersion(); // Simulate version mismatch
+
+        final var aAccountRepositoryVariable = this.accountRepository(); // Variable to use in lambda, because this.customerRepository() is not allowed in lambda
+        // this is a way to test if the exception is thrown, THIS IS A SCAM, in future disable this rule in sonar
+        final var aException = Assertions.assertThrows(ConflictException.class,
+                () -> aAccountRepositoryVariable.applyTransfer(aSavedAccount, aToAccount));
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void givenAValidExistsAccount_whenCallApplyTransfer_thenShouldUpdateBothAccounts() {
+        Assertions.assertEquals(0, countAccounts());
+
+        final var aUserId = "user-123";
+
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var aSavedAccount = this.accountRepository().save(aAccount);
+        final var aToAccount = this.accountRepository().save(Account.newAccount("user-456"));
+
+        Assertions.assertEquals(2, countAccounts());
+
+        aSavedAccount.credit(BigDecimal.TEN);
+
+        aSavedAccount.debit(BigDecimal.TEN);
+        aToAccount.credit(BigDecimal.TEN);
+
+        this.accountRepository().applyTransfer(aSavedAccount, aToAccount);
+
+        final var aFoundFromAccount = this.accountRepository().accountOfId(aSavedAccount.getId().value().toString()).get();
+        final var aFoundToAccount = this.accountRepository().accountOfId(aToAccount.getId().value().toString()).get();
+
+        Assertions.assertEquals(Money.zero().amount(), aFoundFromAccount.getBalance().amount());
+        Assertions.assertEquals(new Money(BigDecimal.TEN).amount(), aFoundToAccount.getBalance().amount());
     }
 }
