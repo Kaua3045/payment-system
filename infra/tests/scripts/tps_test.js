@@ -17,6 +17,7 @@ const transferInsufficient422Count = new Counter("transfer_insufficient_422_coun
 const transfer5xxRate = new Rate("transfer_5xx_rate");
 
 export const options = {
+setupTimeout: "5m",
   scenarios: {
     capacity_rps: {
       executor: "ramping-arrival-rate",
@@ -25,17 +26,21 @@ export const options = {
       preAllocatedVUs: 200,
       maxVUs: 800,
       stages: [
+//        { duration: "30s", target: 200 },
+//        { duration: "1m", target: 200 },
+//
+//        { duration: "30s", target: 330 },
+//        { duration: "1m", target: 330 },
+//
+//        { duration: "30s", target: 400 },
+//        { duration: "1m", target: 400 },
+//
+//        { duration: "30s", target: 500 },
+//        { duration: "1m", target: 500 },
         { duration: "30s", target: 200 },
-        { duration: "1m", target: 200 },
-
-        { duration: "30s", target: 330 },
-        { duration: "1m", target: 330 },
-
+        { duration: "30s", target: 300 },
         { duration: "30s", target: 400 },
-        { duration: "1m", target: 400 },
-
-        { duration: "30s", target: 500 },
-        { duration: "1m", target: 500 },
+        { duration: "2m", target: 400 },
       ],
       gracefulStop: "30s",
     },
@@ -61,7 +66,7 @@ const INITIAL_BALANCE = "100000.00";
 export function setup() {
   const accounts = [];
 
-  for (let i = 0; i < 4000; i++) {
+  for (let i = 0; i < 5000; i++) {
     const accountId = createAccount();
     const email = `user-${i}-${Date.now()}@mail.com`;
 
@@ -176,10 +181,17 @@ export default function (data) {
   group("Transfer Throughput", () => {
     const accounts = data.accounts;
 
-    const fromIndex = (__VU + __ITER) % accounts.length;
-    const toIndex =
-      (fromIndex + 1 + Math.floor(Math.random() * (accounts.length - 1))) %
-      accounts.length;
+//    const fromIndex = (__VU + __ITER) % accounts.length;
+//    const toIndex =
+//      (fromIndex + 1 + Math.floor(Math.random() * (accounts.length - 1))) %
+//      accounts.length;
+
+    const fromIndex = Math.floor(Math.random() * accounts.length);
+    let toIndex = Math.floor(Math.random() * accounts.length);
+
+    while (toIndex === fromIndex) {
+      toIndex = Math.floor(Math.random() * accounts.length);
+    }
 
     const accountA = accounts[fromIndex];
     const accountB = accounts[toIndex];
