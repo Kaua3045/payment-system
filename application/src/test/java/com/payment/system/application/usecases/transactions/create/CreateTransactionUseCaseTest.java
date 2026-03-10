@@ -92,7 +92,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
         Mockito.verify(accountRepository, Mockito.times(2)).accountOfId(any());
         Mockito.verify(pixKeyRepository, Mockito.times(1)).pixKeyOfActiveByValue(any());
-        Mockito.verify(transactionRepository, Mockito.times(2)).save(any());
+        Mockito.verify(transactionRepository, Mockito.times(1)).save(any());
     }
 
     @Test
@@ -306,7 +306,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     }
 
     @Test
-    void givenErrorAfterTransactionCreation_whenExecute_shouldMarkTransactionAsFailed() {
+    void givenErrorAfterTransactionCreation_whenExecute_shouldThrows() {
         final var fromAccount = Account.newAccount("user-1234");
         fromAccount.credit(BigDecimal.ONE);
 
@@ -335,12 +335,6 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
                 .thenReturn(Optional.of(toAccount));
 
-        Mockito.when(transactionRepository.save(transactionCaptor.capture()))
-                .thenAnswer(returnsFirstArg());
-
-        Mockito.when(transactionRepository.transactionOfIdempotencyKey(idempotencyKey))
-                .thenAnswer(inv -> Optional.of(transactionCaptor.getValue()));
-
         final var command = CreateTransactionCommand.with(
                 fromAccount.getId().value().toString(),
                 pixKey.getKey().value(),
@@ -353,7 +347,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
 
-        Mockito.verify(transactionRepository, Mockito.atLeast(2)).save(any(Transaction.class));
+        Mockito.verify(transactionRepository, Mockito.atLeast(0)).save(any(Transaction.class));
     }
 
     @Test
@@ -381,8 +375,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         Mockito.when(accountRepository.accountOfId(toAccount.getId().value().toString()))
                 .thenReturn(Optional.of(toAccount));
 
-        Mockito.when(accountRepository.save(any(Account.class)))
-                .thenThrow(ConflictException.with("Version conflict"));
+        Mockito.doThrow(ConflictException.with("Version conflict"))
+                .when(accountRepository).applyTransfer(any(Account.class), any(Account.class));
 
         final var command = CreateTransactionCommand.with(
                 fromAccount.getId().value().toString(),
