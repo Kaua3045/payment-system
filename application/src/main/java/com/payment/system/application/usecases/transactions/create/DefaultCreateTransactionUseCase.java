@@ -103,13 +103,10 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         input.idempotencyKey()
                 );
 
-                this.transactionRepository.save(aTransaction);
-
                 aFromAccount.debit(input.amount());
                 aToAccount.credit(input.amount());
 
-                this.accountRepository.save(aFromAccount);
-                this.accountRepository.save(aToAccount);
+                this.accountRepository.applyTransfer(aFromAccount, aToAccount);
 
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
@@ -137,19 +134,10 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 );
                 this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
                         "usecase", "pix_transfer",
-                        "error_code", "idempotency_conflict"
+                        "error_code", "conflict_version_or_idempotency_key"
                 ));
                 throw conflictException;
             }
-
-            this.transactionManager.execute(() -> {
-                this.transactionRepository.transactionOfIdempotencyKey(input.idempotencyKey())
-                        .ifPresent(tx -> {
-                            tx.fail(ex.getMessage());
-                            this.transactionRepository.save(tx);
-                        });
-                return null;
-            });
 
             final var aErrorType = ErrorClassifier.classify(ex);
 
