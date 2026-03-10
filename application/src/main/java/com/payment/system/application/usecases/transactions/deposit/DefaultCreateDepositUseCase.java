@@ -127,7 +127,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 );
                 this.metrics.incrementCounter("application_usecase_errors_total", 1, Map.of(
                         "usecase", "deposit_create",
-                        "error_code", "idempotency_key_conflict"
+                        "error_code", "conflict_version_or_idempotency_key"
                 ));
                 throw conflictException;
             }
