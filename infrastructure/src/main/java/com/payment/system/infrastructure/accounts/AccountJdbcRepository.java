@@ -51,6 +51,37 @@ public class AccountJdbcRepository implements AccountRepository {
         return anAccount;
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void applyTransfer(final Account fromAccount, final Account toAccount) {
+        final var aSql = """
+                UPDATE accounts
+                SET balance = CASE
+                        WHEN id = :fromId THEN :fromBalance
+                        WHEN id = :toId THEN :toBalance
+                    END,
+                    version = version + 1,
+                    updated_at = :updatedAt
+                WHERE (id = :fromId AND version = :fromVersion)
+                     OR (id = :toId AND version = :toVersion)
+                """;
+
+        final var aParams = new HashMap<String, Object>();
+        aParams.put("fromId", fromAccount.getId().value().toString());
+        aParams.put("toId", toAccount.getId().value().toString());
+        aParams.put("fromBalance", fromAccount.getBalance().amount());
+        aParams.put("toBalance", toAccount.getBalance().amount());
+        aParams.put("updatedAt", OffsetDateTime.ofInstant(fromAccount.getUpdatedAt(), ZoneOffset.UTC));
+        aParams.put("fromVersion", fromAccount.getVersion());
+        aParams.put("toVersion", toAccount.getVersion());
+
+        final var aRowsAffected = this.databaseClient.update(aSql, aParams);
+
+        if (aRowsAffected != 2) {
+            throw ConflictException.with("Optimistic lock failure on transfer, one of the accounts was updated by another transaction");
+        }
+    }
+
     @Override
     public Optional<Account> accountOfId(final String anId) {
         final var aSql = "SELECT * FROM accounts WHERE id = :id";
