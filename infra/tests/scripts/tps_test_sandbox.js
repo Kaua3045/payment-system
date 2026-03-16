@@ -17,7 +17,7 @@ const transferInsufficient422Count = new Counter("transfer_insufficient_422_coun
 const transfer5xxRate = new Rate("transfer_5xx_rate");
 
 export const options = {
-setupTimeout: "5m",
+  setupTimeout: "15m",
   scenarios: {
     capacity_rps: {
       executor: "ramping-arrival-rate",
@@ -26,22 +26,19 @@ setupTimeout: "5m",
       preAllocatedVUs: 200,
       maxVUs: 800,
       stages: [
-//        { duration: "30s", target: 200 },
-//        { duration: "1m", target: 200 },
-//
-//        { duration: "30s", target: 330 },
-//        { duration: "1m", target: 330 },
-//
-//        { duration: "30s", target: 400 },
-//        { duration: "1m", target: 400 },
-//
-//        { duration: "30s", target: 500 },
-//        { duration: "1m", target: 500 },
-        { duration: "30s", target: 200 },
-        { duration: "30s", target: 300 },
-        { duration: "30s", target: 400 },
-        { duration: "2m", target: 400 },
+        { duration: "1m", target: 200 },
+        { duration: "1m", target: 300 },
+        { duration: "1m", target: 400 },
+        { duration: "1m", target: 500 },
+        { duration: "1m", target: 600 },
+        { duration: "3m", target: 600 },
       ],
+//      stages: [
+//        { duration: "30s", target: 200 },
+//        { duration: "30s", target: 300 },
+//        { duration: "30s", target: 400 },
+//        { duration: "2m", target: 400 },
+//      ],
       gracefulStop: "30s",
     },
   },
@@ -62,96 +59,149 @@ setupTimeout: "5m",
 
 const BASE_URL = getBaseUrl();
 const INITIAL_BALANCE = "100000.00";
+const TOTAL_ACCOUNTS = 5000;
+const BATCH_SIZE = 200; // teste 50, 100, 200
+//const BATCH_SIZE = 100; // teste 50, 100, 200
 
-export function setup() {
-  const accounts = [];
-
-  for (let i = 0; i < 5000; i++) {
-    const accountId = createAccount();
-    const email = `user-${i}-${Date.now()}@mail.com`;
-
-    createPixKey(accountId, email);
-    prefundAccount(email, INITIAL_BALANCE);
-
-    accounts.push({ accountId, email });
+function chunkArray(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
   }
-
-  return { accounts };
+  return chunks;
 }
 
-function randomAmount() {
-  return (Math.random() * 100 + 1).toFixed(2);
-}
-
-function createAccount() {
-  const res = http.post(
-    `${BASE_URL}/v1/accounts`,
-    JSON.stringify({ user_id: uuidv4() }),
-    {
+function buildCreateAccountRequest(userId) {
+  return {
+    method: "POST",
+    url: `${BASE_URL}/v1/accounts`,
+    body: JSON.stringify({ user_id: userId }),
+    params: {
       headers: {
         "Content-Type": "application/json",
         "x-idempotency-key": uuidv4(),
       },
       tags: { name: "create_account" },
-    }
-  );
-
-  check(res, { "account created": (r) => r.status === 201 });
-
-  if (res.status !== 201) {
-    throw new Error(`failed to create account: status=${res.status} body=${res.body}`);
-  }
-
-  return res.json("id");
+    },
+  };
 }
 
-function createPixKey(accountId, email) {
-  const res = http.post(
-    `${BASE_URL}/v1/pix-keys`,
-    JSON.stringify({
+function buildCreatePixKeyRequest(accountId, email) {
+  return {
+    method: "POST",
+    url: `${BASE_URL}/v1/pix-keys`,
+    body: JSON.stringify({
       type: "EMAIL",
       value: email,
       account_id: accountId,
     }),
-    {
+    params: {
       headers: {
         "Content-Type": "application/json",
         "x-idempotency-key": uuidv4(),
       },
       tags: { name: "create_pix_key" },
-    }
-  );
-
-  check(res, { "pix key created": (r) => r.status === 201 });
-
-  if (res.status !== 201) {
-    throw new Error(`failed to create pix key: status=${res.status} body=${res.body}`);
-  }
+    },
+  };
 }
 
-function prefundAccount(email, amount) {
-  const res = http.post(
-    `${BASE_URL}/v1/transactions/deposit`,
-    JSON.stringify({
+function buildPrefundRequest(email, amount) {
+  return {
+    method: "POST",
+    url: `${BASE_URL}/v1/transactions/deposit`,
+    body: JSON.stringify({
       pix_key: email,
       pix_key_type: "EMAIL",
       source: "external",
       amount,
     }),
-    {
+    params: {
       headers: {
         "Content-Type": "application/json",
         "x-idempotency-key": uuidv4(),
       },
       tags: { name: "prefund_deposit" },
-    }
-  );
+    },
+  };
+}
 
-  check(res, { "prefund deposit ok": (r) => r.status === 201 });
+export function setup() {
+  const runId = Date.now();
+  const seedAccounts = Array.from({ length: TOTAL_ACCOUNTS }, (_, i) => ({
+    idx: i,
+    userId: uuidv4(),
+    email: `user-${i}-${runId}@mail.com`,
+    accountId: null,
+  }));
 
-  if (res.status !== 201) {
-    throw new Error(`failed to prefund account: status=${res.status} body=${res.body}`);
+  const chunks = chunkArray(seedAccounts, BATCH_SIZE);
+
+  for (const batch of chunks) {
+    const requests = batch.map((item) => buildCreateAccountRequest(item.userId));
+    const responses = http.batch(requests);
+
+    responses.forEach((res, index) => {
+      const ok = check(res, {
+        "account created": (r) => r.status === 201,
+      });
+
+      if (!ok) {
+//        throw new Error(
+//          `failed to create account: status=${res.status} body=${res.body}`
+//        );
+      }
+
+      batch[index].accountId = res.json("id");
+    });
   }
+
+  for (const batch of chunks) {
+    const requests = batch.map((item) =>
+      buildCreatePixKeyRequest(item.accountId, item.email)
+    );
+
+    const responses = http.batch(requests);
+
+    responses.forEach((res) => {
+      const ok = check(res, {
+        "pix key created": (r) => r.status === 201,
+      });
+
+      if (!ok) {
+//        throw new Error(
+//          `failed to create pix key: status=${res.status} body=${res.body}`
+//        );
+      }
+    });
+  }
+
+  for (const batch of chunks) {
+    const requests = batch.map((item) =>
+      buildPrefundRequest(item.email, INITIAL_BALANCE)
+    );
+
+    const responses = http.batch(requests);
+
+    responses.forEach((res) => {
+      const ok = check(res, {
+        "prefund deposit ok": (r) => r.status === 201,
+      });
+
+      if (!ok) {
+//        throw new Error(
+//          `failed to prefund account: status=${res.status} body=${res.body}`
+//        );
+      }
+    });
+  }
+
+  return {
+    accounts: seedAccounts.map(({ accountId, email }) => ({ accountId, email })),
+  };
+}
+
+function randomAmount() {
+  return (Math.random() * 100 + 1).toFixed(2);
 }
 
 function getBalance(accountId) {
@@ -180,11 +230,6 @@ function recordTransferMetrics(res) {
 export default function (data) {
   group("Transfer Throughput", () => {
     const accounts = data.accounts;
-
-//    const fromIndex = (__VU + __ITER) % accounts.length;
-//    const toIndex =
-//      (fromIndex + 1 + Math.floor(Math.random() * (accounts.length - 1))) %
-//      accounts.length;
 
     const fromIndex = Math.floor(Math.random() * accounts.length);
     let toIndex = Math.floor(Math.random() * accounts.length);
