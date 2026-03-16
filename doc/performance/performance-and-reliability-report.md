@@ -190,7 +190,31 @@ Arquitetura atual apresenta algumas limitações naturais:
 - ausência de ledger de auditoria
 - escalabilidade limitada pela capacidade do banco
 
-## 11. Conclusão
+## 11. Testado em AWS ECS
+Arquitetura
+- RDS PostgreSQL com tipo de instância db.t4g.medium
+- ElasticCache Redis com tipo de instância cache.t4g.small e 1 cluster
+- ECS Fargate com tipo de instância `fargate`, 2 vCPU, 4gb de RAM e 2 tasks rodando a aplicação
+- Teste rodando localmente na minha máquina (Ryzen 5 5600G, 32GB de RAM)
+    ```javascript
+    preAllocatedVUs: 200,
+      maxVUs: 800,
+      stages: [
+        { duration: "1m", target: 200 },
+        { duration: "1m", target: 300 },
+        { duration: "1m", target: 400 },
+        { duration: "1m", target: 500 },
+        { duration: "1m", target: 600 },
+        { duration: "3m", target: 600 },
+      ],
+  ```
+- Faltando em torno de 1m e 15s para o fim dos 600 target, o pending subiu para 58 no banco de dados e a latência começou a subir, o teste foi interrompido nesse ponto.
+- Suportou 470 ~ 500 rps
+  - avg ~ 170ms
+  - p95 ~ 200ms
+  - p99 ~ 450ms
+
+## 12. Conclusão
 O sistema demonstrou capacidade de processar:
 > 330 – 400 requisições por segundo de forma sustentável
 
@@ -201,5 +225,3 @@ Com:
 - erros limitados a regras de negócio
 
 O principal limite atual está no banco de dados e pool de conexões, indicando que futuras melhorias devem focar em reduzir round-trips ao banco e desacoplar processamento síncrono.
-
-
