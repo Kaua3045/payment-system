@@ -2,7 +2,8 @@ export const ENV = __ENV.ENV || 'dev';
 
 export const ENVIRONMENTS = {
   dev: {
-    baseUrl: 'http://app:8081/api',
+//    baseUrl: 'http://app:8081/api',
+    baseUrl: 'http://payment-system-dev-alb-1095729131.us-east-1.elb.amazonaws.com/api',
   },
   staging: {
     baseUrl: 'https://change.me',
