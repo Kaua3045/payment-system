@@ -25,6 +25,7 @@ module "security_groups" {
   project      = var.project
   environment  = var.environment
   vpc_id       = module.network.vpc_id
+  vpc_cidr     = var.vpc_cidr
   app_port     = var.app_port
   grafana_port = var.grafana_port
   common_tags  = local.common_tags

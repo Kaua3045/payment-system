@@ -5,7 +5,7 @@ resource "random_password" "db_password" {
 }
 
 resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "${var.project}/${var.environment}/databasess"
+  name        = "${var.project}/${var.environment}/databasessss"
   description = "Database credentials for ${var.project}-${var.environment}"
 
   tags = merge(var.common_tags, {
