@@ -5,6 +5,11 @@ build/
 !**/src/test/**/build/
 
 .env
+infra/terraform/envs/**/.terraform
+infra/terraform/envs/**/*.tfstate
+infra/terraform/envs/**/*.tfstate.*
+infra/terraform/envs/**/dashboard-payload.json
+infra/terraform/envs/**/dashboard-response.json
 
 ### IntelliJ IDEA ###
 .idea/

@@ -1,0 +1,31 @@
+extensions:
+  sigv4auth:
+    service: aps
+    region: "${aws_region}"
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  prometheusremotewrite:
+    resource_to_telemetry_conversion:
+        enabled: true
+    endpoint: "${amp_remote_write_endpoint}"
+    auth:
+      authenticator: sigv4auth
+
+service:
+  extensions: [sigv4auth]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheusremotewrite]
