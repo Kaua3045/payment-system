@@ -2,6 +2,8 @@ package com.payment.system.infrastructure.rest.controllers;
 
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyCommand;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyUseCase;
+import com.payment.system.application.usecases.pixkeys.retrieve.get.GetPixKeyByValueCommand;
+import com.payment.system.application.usecases.pixkeys.retrieve.get.GetPixKeyByValueUseCase;
 import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysUseCase;
 import com.payment.system.domain.pagination.Pagination;
 import com.payment.system.domain.pagination.SearchQuery;
@@ -9,6 +11,7 @@ import com.payment.system.domain.utils.Period;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
 import com.payment.system.infrastructure.pixkeys.req.CreatePixKeyRequest;
 import com.payment.system.infrastructure.pixkeys.res.CreatePixKeyResponse;
+import com.payment.system.infrastructure.pixkeys.res.GetPixKeyByValueResponse;
 import com.payment.system.infrastructure.pixkeys.res.ListPixKeysResponse;
 import com.payment.system.infrastructure.rest.PixKeyAPI;
 import org.slf4j.Logger;
@@ -28,13 +31,16 @@ public class PixKeyRestController implements PixKeyAPI {
 
     private final CreatePixKeyUseCase createPixKeyUseCase;
     private final ListPixKeysUseCase listPixKeysUseCase;
+    private final GetPixKeyByValueUseCase getPixKeyByValueUseCase;
 
     public PixKeyRestController(
             final CreatePixKeyUseCase createPixKeyUseCase,
-            final ListPixKeysUseCase listPixKeysUseCase
+            final ListPixKeysUseCase listPixKeysUseCase,
+            final GetPixKeyByValueUseCase getPixKeyByValueUseCase
     ) {
         this.createPixKeyUseCase = Objects.requireNonNull(createPixKeyUseCase);
         this.listPixKeysUseCase = Objects.requireNonNull(listPixKeysUseCase);
+        this.getPixKeyByValueUseCase = Objects.requireNonNull(getPixKeyByValueUseCase);
     }
 
     @IdempotencyKey
@@ -55,6 +61,19 @@ public class PixKeyRestController implements PixKeyAPI {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CreatePixKeyResponse.from(aOutput));
+    }
+
+    @Override
+    public ResponseEntity<GetPixKeyByValueResponse> getPixKeyByValue(final String value) {
+        log.info("Received get pix key by value request: {}", value);
+
+        final var aOutput = this.getPixKeyByValueUseCase.execute(GetPixKeyByValueCommand.with(value));
+
+        log.debug("Pix key retrieved successfully: {}", aOutput);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(GetPixKeyByValueResponse.from(aOutput));
     }
 
     @Override
