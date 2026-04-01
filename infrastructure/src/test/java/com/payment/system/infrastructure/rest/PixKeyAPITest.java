@@ -5,10 +5,16 @@ import com.payment.system.ControllerTest;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyCommand;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyOutput;
 import com.payment.system.application.usecases.pixkeys.create.CreatePixKeyUseCase;
+import com.payment.system.application.usecases.pixkeys.retrieve.get.GetPixKeyByValueOutput;
+import com.payment.system.application.usecases.pixkeys.retrieve.get.GetPixKeyByValueUseCase;
 import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysOutput;
 import com.payment.system.application.usecases.pixkeys.retrieve.list.ListPixKeysUseCase;
+import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.pagination.Pagination;
 import com.payment.system.domain.pagination.PaginationMetadata;
+import com.payment.system.domain.pixkeys.PixKey;
+import com.payment.system.domain.pixkeys.PixKeyType;
+import com.payment.system.domain.pixkeys.PixKeyValueFactory;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.infrastructure.idempotency.IdempotencyKey;
@@ -42,6 +48,9 @@ class PixKeyAPITest {
 
     @MockitoBean
     private ListPixKeysUseCase listPixKeysUseCase;
+
+    @MockitoBean
+    private GetPixKeyByValueUseCase getPixKeyByValueUseCase;
 
     @Captor
     private ArgumentCaptor<CreatePixKeyCommand> createPixKeyCommandCaptor;
@@ -158,5 +167,36 @@ class PixKeyAPITest {
                 .andExpect(jsonPath("$.items[0].status").value(aPixKeyOne.status()));
 
         Mockito.verify(listPixKeysUseCase, Mockito.times(1)).execute(any());
+    }
+
+    @Test
+    void givenAValidValue_whenCallGetPixKeyByValue_thenReturnPixKey() throws Exception {
+        final var aPixKey = PixKey.newPixKey(new PixKeyValueFactory().create(PixKeyType.RANDOM, IdentifierUtils.generateNewId()),
+                new AccountId(IdentifierUtils.generateNewMonotonicULID()));
+
+        final var aValue = aPixKey.getKey().value();
+
+        Mockito.when(getPixKeyByValueUseCase.execute(any()))
+                .thenReturn(GetPixKeyByValueOutput.from(aPixKey));
+
+        final var aRequest = MockMvcRequestBuilders.get("/v1/pix-keys/{value}", aValue)
+                .with(ApiTest.admin())
+                .accept(MediaType.APPLICATION_JSON_VALUE);
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(aPixKey.getId().value().toString()))
+                .andExpect(jsonPath("$.account_id").value(aPixKey.getAccountId().value().toString()))
+                .andExpect(jsonPath("$.value").value(aPixKey.getKey().value()))
+                .andExpect(jsonPath("$.type").value(aPixKey.getKey().type().name()))
+                .andExpect(jsonPath("$.status").value(aPixKey.getStatus().name()))
+                .andExpect(jsonPath("$.created_at").value(aPixKey.getCreatedAt().toString()))
+                .andExpect(jsonPath("$.updated_at").value(aPixKey.getUpdatedAt().toString()))
+                .andExpect(jsonPath("$.deleted_at").isEmpty());
+
+        Mockito.verify(getPixKeyByValueUseCase, Mockito.times(1)).execute(any());
     }
 }
