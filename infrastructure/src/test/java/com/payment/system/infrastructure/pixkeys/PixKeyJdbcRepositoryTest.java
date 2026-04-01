@@ -450,4 +450,43 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
         Assertions.assertEquals("new@mail.com", pixKey.getKey().value());
         Assertions.assertEquals(PixKeyStatus.ACTIVE, pixKey.getStatus());
     }
+
+    @Test
+    void givenAValidPixKeyValue_whenCallsPixKeyOfValue_thenReturnPixKey() {
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var aType = "RANDOM";
+        final var aValue = IdentifierUtils.generateNewId();
+
+        final var aPixKey = PixKey.newPixKey(new PixKeyValueFactory().create(PixKeyType.from(aType).get(), aValue), aAccountId);
+        this.pixKeyRepository().save(aPixKey);
+
+        Assertions.assertEquals(1, countPixKeys());
+
+        final var aSavedPixKey = this.pixKeyRepository().pixKeyOfValue(aPixKey.getKey().value()).get();
+
+        Assertions.assertEquals(aPixKey.getId(), aSavedPixKey.getId());
+        Assertions.assertEquals(1, aSavedPixKey.getVersion());
+        Assertions.assertEquals(aType, aSavedPixKey.getKey().type().name());
+        Assertions.assertEquals(aValue, aSavedPixKey.getKey().value());
+        Assertions.assertEquals(aAccountId, aSavedPixKey.getAccountId());
+        Assertions.assertEquals(aPixKey.getStatus(), aSavedPixKey.getStatus());
+        Assertions.assertEquals(aPixKey.getCreatedAt(), aSavedPixKey.getCreatedAt());
+        Assertions.assertEquals(aPixKey.getUpdatedAt(), aSavedPixKey.getUpdatedAt());
+        Assertions.assertTrue(aSavedPixKey.getDeletedAt().isEmpty());
+    }
+
+    @Test
+    void givenAnInvalidPixKeyValue_whenCallsPixKeyOfValue_thenReturnEmpty() {
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var aValue = IdentifierUtils.generateNewId();
+
+        Assertions.assertEquals(0, countPixKeys());
+
+        final var aPixKey = this.pixKeyRepository().pixKeyOfValue(aValue);
+
+        Assertions.assertTrue(aPixKey.isEmpty());
+    }
 }
