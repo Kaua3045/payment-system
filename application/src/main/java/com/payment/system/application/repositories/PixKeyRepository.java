@@ -14,5 +14,7 @@ public interface PixKeyRepository {
 
     Optional<PixKey> pixKeyOfActiveByValue(String value);
 
+    Optional<PixKey> pixKeyOfValue(String value);
+
     Pagination<PixKey> listAll(SearchQuery query);
 }

@@ -3,6 +3,7 @@ package com.payment.system.infrastructure.rest;
 import com.payment.system.domain.pagination.Pagination;
 import com.payment.system.infrastructure.pixkeys.req.CreatePixKeyRequest;
 import com.payment.system.infrastructure.pixkeys.res.CreatePixKeyResponse;
+import com.payment.system.infrastructure.pixkeys.res.GetPixKeyByValueResponse;
 import com.payment.system.infrastructure.pixkeys.res.ListPixKeysResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,6 +31,18 @@ public interface PixKeyAPI {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     ResponseEntity<CreatePixKeyResponse> createPixKey(@RequestBody CreatePixKeyRequest request);
+
+    @GetMapping(
+            value = "/{value}",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @Operation(summary = "Get pix key details by Value")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "PixKey details retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "PixKey not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    ResponseEntity<GetPixKeyByValueResponse> getPixKeyByValue(@PathVariable("value") String value);
 
     @GetMapping(
             produces = MediaType.APPLICATION_JSON_VALUE

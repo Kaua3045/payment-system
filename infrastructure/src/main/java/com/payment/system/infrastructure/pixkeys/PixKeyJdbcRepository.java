@@ -8,7 +8,6 @@ import com.payment.system.domain.pagination.Pagination;
 import com.payment.system.domain.pagination.PaginationMetadata;
 import com.payment.system.domain.pagination.SearchQuery;
 import com.payment.system.domain.pixkeys.*;
-import com.payment.system.domain.utils.ULID;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
 import com.payment.system.infrastructure.jdbc.JdbcUtils;
 import com.payment.system.infrastructure.jdbc.RowMap;
@@ -58,6 +57,12 @@ public class PixKeyJdbcRepository implements PixKeyRepository {
     @Override
     public Optional<PixKey> pixKeyOfActiveByValue(final String value) {
         final var aSql = "SELECT * FROM pix_keys WHERE status = 'ACTIVE' AND key_value = :value";
+        return this.databaseClient.queryOne(aSql, Map.of("value", value), pixKeyMapper());
+    }
+
+    @Override
+    public Optional<PixKey> pixKeyOfValue(final String value) {
+        final var aSql = "SELECT * FROM pix_keys WHERE key_value = :value";
         return this.databaseClient.queryOne(aSql, Map.of("value", value), pixKeyMapper());
     }
 
