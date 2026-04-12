@@ -1,6 +1,7 @@
 package com.payment.system.domain.accounts;
 
 import com.payment.system.domain.AggregateRoot;
+import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
@@ -89,6 +90,20 @@ public class Account extends AggregateRoot<AccountId> {
     public void credit(final BigDecimal aAmount) {
         this.setBalance(balance.add(new Money(aAmount)));
         this.setUpdatedAt(InstantUtils.now());
+    }
+
+    public void close() {
+        if (!status.equals(AccountStatus.ACTIVE)) {
+            return;
+        }
+
+        if (balance.isGreaterThanOrEqual(new Money(new BigDecimal("1")))) {
+            throw DomainException.with("Account does not permitted to close with balance is greater than 0");
+        }
+
+        this.setStatus(AccountStatus.CLOSED);
+        this.setUpdatedAt(InstantUtils.now());
+        this.setClosedAt(InstantUtils.now());
     }
 
     public String getUserId() {
