@@ -1,6 +1,8 @@
 package com.payment.system.infrastructure.configurations.usecases;
 
 import com.payment.system.application.repositories.AccountRepository;
+import com.payment.system.application.usecases.accounts.close.CloseAccountUseCase;
+import com.payment.system.application.usecases.accounts.close.DefaultCloseAccountUseCase;
 import com.payment.system.application.usecases.accounts.create.CreateAccountUseCase;
 import com.payment.system.application.usecases.accounts.create.DefaultCreateAccountUseCase;
 import com.payment.system.application.usecases.accounts.retrieve.id.DefaultGetAccountByIdUseCase;
@@ -26,5 +28,12 @@ public class AccountUseCaseConfig {
             final AccountRepository accountRepository
     ) {
         return new DefaultGetAccountByIdUseCase(accountRepository, new Slf4jApplicationLogger(GetAccountByIdUseCase.class));
+    }
+
+    @Bean
+    public CloseAccountUseCase closeAccountUseCase(
+            final AccountRepository accountRepository
+    ) {
+        return new DefaultCloseAccountUseCase(accountRepository, new Slf4jApplicationLogger(CloseAccountUseCase.class));
     }
 }
