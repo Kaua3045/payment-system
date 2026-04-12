@@ -141,4 +141,58 @@ class AccountTest extends UnitTest {
         Assertions.assertTrue(aAccountIdSystem.isSystem());
         Assertions.assertFalse(new AccountId(IdentifierUtils.generateNewMonotonicULID()).isSystem());
     }
+
+    @Test
+    void giveAnAccountWithZeroBalance_whenCallsClose_thenCloseIt() {
+        final var aUserId = "user-123";
+        final var aAccount = Account.newAccount(aUserId);
+
+        aAccount.close();
+
+        Assertions.assertEquals(AccountStatus.CLOSED, aAccount.getStatus());
+        Assertions.assertTrue(aAccount.getClosedAt().isPresent());
+    }
+
+    @Test
+    void givenAnClosedAccount_whenCallsClose_thenReturnWithoutChanges() {
+        final var aUserId = "user-123";
+        final var aAccount = Account.newAccount(aUserId);
+
+        aAccount.close();
+
+        final var closedAt = aAccount.getClosedAt();
+
+        aAccount.close();
+
+        Assertions.assertEquals(AccountStatus.CLOSED, aAccount.getStatus());
+        Assertions.assertEquals(closedAt, aAccount.getClosedAt());
+    }
+
+    @Test
+    void givenAnAccountWithBalance_whenCallsClose_thenThrowsDomainException() {
+        final var aUserId = "user-1234";
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var expectedErrorMessage = "Account does not permitted to close with balance is greater than 0";
+
+        aAccount.credit(new BigDecimal("100.00"));
+
+        final var aException = Assertions.assertThrows(DomainException.class, aAccount::close);
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
+
+    @Test
+    void givenAnAccountWithBalanceIsOne_whenCallsClose_thenThrowsDomainException() {
+        final var aUserId = "user-1234";
+        final var aAccount = Account.newAccount(aUserId);
+
+        final var expectedErrorMessage = "Account does not permitted to close with balance is greater than 0";
+
+        aAccount.credit(new BigDecimal("1"));
+
+        final var aException = Assertions.assertThrows(DomainException.class, aAccount::close);
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+    }
 }
