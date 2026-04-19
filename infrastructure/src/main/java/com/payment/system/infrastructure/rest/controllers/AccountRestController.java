@@ -1,5 +1,7 @@
 package com.payment.system.infrastructure.rest.controllers;
 
+import com.payment.system.application.usecases.accounts.close.CloseAccountCommand;
+import com.payment.system.application.usecases.accounts.close.CloseAccountUseCase;
 import com.payment.system.application.usecases.accounts.create.CreateAccountCommand;
 import com.payment.system.application.usecases.accounts.create.CreateAccountUseCase;
 import com.payment.system.application.usecases.accounts.retrieve.id.GetAccountByIdCommand;
@@ -24,13 +26,16 @@ public class AccountRestController implements AccountAPI {
 
     private final CreateAccountUseCase createAccountUseCase;
     private final GetAccountByIdUseCase getAccountByIdUseCase;
+    private final CloseAccountUseCase closeAccountUseCase;
 
     public AccountRestController(
             final CreateAccountUseCase createAccountUseCase,
-            final GetAccountByIdUseCase getAccountByIdUseCase
+            final GetAccountByIdUseCase getAccountByIdUseCase,
+            final CloseAccountUseCase closeAccountUseCase
     ) {
         this.createAccountUseCase = Objects.requireNonNull(createAccountUseCase);
         this.getAccountByIdUseCase = Objects.requireNonNull(getAccountByIdUseCase);
+        this.closeAccountUseCase = Objects.requireNonNull(closeAccountUseCase);
     }
 
     @IdempotencyKey
@@ -56,5 +61,14 @@ public class AccountRestController implements AccountAPI {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(GetAccountByIdResponse.from(aOutput));
+    }
+
+    @Override
+    public void closeAccountById(final String accountId) {
+        final var aCommand = CloseAccountCommand.with(accountId);
+
+        this.closeAccountUseCase.execute(aCommand);
+
+        log.info("Account with ID {} closed successfully", accountId);
     }
 }

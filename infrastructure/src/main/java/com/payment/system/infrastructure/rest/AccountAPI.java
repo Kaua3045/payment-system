@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,4 +40,18 @@ public interface AccountAPI {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     ResponseEntity<GetAccountByIdResponse> getAccountById(@PathVariable("accountId") String accountId);
+
+    @DeleteMapping(
+            value = "/{accountId}",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Close account by ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Account closed successfully"),
+            @ApiResponse(responseCode = "404", description = "Account not found"),
+            @ApiResponse(responseCode = "422", description = "Account cannot be closed due to business rules"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    void closeAccountById(@PathVariable("accountId") String accountId);
 }

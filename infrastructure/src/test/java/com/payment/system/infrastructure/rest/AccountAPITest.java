@@ -2,6 +2,8 @@ package com.payment.system.infrastructure.rest;
 
 import com.payment.system.ApiTest;
 import com.payment.system.ControllerTest;
+import com.payment.system.application.usecases.accounts.close.CloseAccountCommand;
+import com.payment.system.application.usecases.accounts.close.CloseAccountUseCase;
 import com.payment.system.application.usecases.accounts.create.CreateAccountCommand;
 import com.payment.system.application.usecases.accounts.create.CreateAccountOutput;
 import com.payment.system.application.usecases.accounts.create.CreateAccountUseCase;
@@ -37,6 +39,9 @@ class AccountAPITest {
 
     @MockitoBean
     private GetAccountByIdUseCase getAccountByIdUseCase;
+
+    @MockitoBean
+    private CloseAccountUseCase closeAccountUseCase;
 
     @Captor
     private ArgumentCaptor<CreateAccountCommand> createAccountCommandCaptor;
@@ -107,5 +112,23 @@ class AccountAPITest {
                 .andExpect(jsonPath("$.updated_at").value(aAccount.getUpdatedAt().toString()));
 
         Mockito.verify(getAccountByIdUseCase, Mockito.times(1)).execute(any());
+    }
+
+    @Test
+    void givenAValidId_whenCallsCloseAccountById_shouldReturnHttp200() throws Exception {
+        final var aAccount = Account.newAccount("user-123");
+
+        Mockito.doNothing().when(closeAccountUseCase).execute(CloseAccountCommand.with(aAccount.getId().value().toString()));
+
+        final var aRequest = MockMvcRequestBuilders.delete("/v1/accounts/{accountId}", aAccount.getId().value().toString())
+                .with(ApiTest.admin());
+
+        final var aResponse = this.mvc.perform(aRequest);
+
+        aResponse
+                .andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk());
+
+        Mockito.verify(closeAccountUseCase, Mockito.times(1)).execute(any());
     }
 }
