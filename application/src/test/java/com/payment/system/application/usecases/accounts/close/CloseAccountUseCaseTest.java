@@ -69,6 +69,24 @@ class CloseAccountUseCaseTest extends UseCaseTest {
     }
 
     @Test
+    void givenAnClosedAccount_whenCallsCloseAccount_shouldReturnNothing() {
+        final var aAccount = Account.newAccount("user-12345");
+        aAccount.close();
+
+        final var aAccountId = aAccount.getId().value().toString();
+
+        final var aCommand = CloseAccountCommand.with(aAccountId);
+
+        Mockito.when(accountRepository.accountOfId(aAccountId))
+                .thenReturn(Optional.of(aAccount));
+
+        Assertions.assertDoesNotThrow(() -> this.useCase.execute(aCommand));
+
+        Mockito.verify(accountRepository, Mockito.times(1)).accountOfId(argThat(aCmd ->
+                Objects.equals(aCmd, aAccountId)));
+    }
+
+    @Test
     void givenAnInvalidNullCommand_whenCallsCloseAccount_shouldThrowException() {
         final var expectedErrorMessage = "Input to CloseAccountUseCase cannot be null";
 
