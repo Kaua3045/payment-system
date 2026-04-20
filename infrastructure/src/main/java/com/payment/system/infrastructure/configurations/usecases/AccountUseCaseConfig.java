@@ -32,8 +32,9 @@ public class AccountUseCaseConfig {
 
     @Bean
     public CloseAccountUseCase closeAccountUseCase(
-            final AccountRepository accountRepository
+            final AccountRepository accountRepository,
+            final Metrics metrics
     ) {
-        return new DefaultCloseAccountUseCase(accountRepository, new Slf4jApplicationLogger(CloseAccountUseCase.class));
+        return new DefaultCloseAccountUseCase(accountRepository, metrics, new Slf4jApplicationLogger(CloseAccountUseCase.class));
     }
 }
