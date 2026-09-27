@@ -12,6 +12,7 @@ import com.payment.system.application.usecases.transactions.retrieve.id.GetTrans
 import com.payment.system.application.usecases.transactions.retrieve.list.DefaultListTransactionsUseCase;
 import com.payment.system.application.usecases.transactions.retrieve.list.ListTransactionsUseCase;
 import com.payment.system.application.wrapper.Metrics;
+import com.payment.system.application.wrapper.TracerWrapper;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.infrastructure.wrapper.Slf4jApplicationLogger;
 import org.springframework.context.annotation.Bean;
@@ -26,15 +27,17 @@ public class TransactionUseCaseConfig {
             final PixKeyRepository pixKeyRepository,
             final TransactionRepository transactionRepository,
             final TransactionManager transactionManager,
-            final Metrics metrics
-    ) {
+            final Metrics metrics,
+            final TracerWrapper tracerWrapper
+            ) {
         return new DefaultCreateTransactionUseCase(
                 accountRepository,
                 pixKeyRepository,
                 transactionRepository,
                 transactionManager,
                 metrics,
-                new Slf4jApplicationLogger(CreateTransactionUseCase.class)
+                new Slf4jApplicationLogger(CreateTransactionUseCase.class),
+                tracerWrapper
         );
     }
 
