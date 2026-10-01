@@ -5,6 +5,7 @@ import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.transactions.TransactionId;
 
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.ValidationHandler;
 
 import java.math.BigDecimal;
@@ -54,7 +55,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
                 transactionId,
                 amount.negate(),
                 LedgerType.DEBIT,
-                Instant.now()
+                InstantUtils.now()
         );
     }
 
@@ -70,7 +71,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
                 transactionId,
                 amount,
                 LedgerType.CREDIT,
-                Instant.now()
+                InstantUtils.now()
         );
     }
 

@@ -4,6 +4,7 @@ import com.payment.system.domain.AggregateRoot;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.transactions.TransactionId;
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.ValidationHandler;
 
 import java.math.BigDecimal;
@@ -75,7 +76,7 @@ public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
                 transactionId,
                 accountId,
                 amount,
-                Instant.now(),
+                InstantUtils.now(),
                 expiresAt,
                 ReservationStatus.PENDING
         );
