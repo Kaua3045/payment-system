@@ -359,6 +359,25 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
+    void givenBlankAccountIdFilter_whenCallsListAll_thenShouldThrowException() {
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc",
+                Map.of("accountId", "")
+        );
+
+        final var exception = Assertions.assertThrows(
+                DomainException.class,
+                () -> this.transactionRepository().listAll(query)
+        );
+
+        Assertions.assertEquals("Filter accountId is required", exception.getMessage());
+    }
+
+    @Test
     void givenNoTransactions_whenCallsListAll_thenShouldReturnEmptyPagination() {
         final var accountId = IdentifierUtils.generateNewMonotonicULID().toString();
 
@@ -560,7 +579,6 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
         final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
 
         final var oldDate = InstantUtils.now().minusSeconds(86400 * 5);
-        final var newDate = InstantUtils.now();
 
         final var oldTx = Transaction.with(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
@@ -603,6 +621,192 @@ class TransactionJdbcRepositoryTest extends AbstractRepositoryTest {
                 "createdAt",
                 "asc",
                 period,
+                Map.of("accountId", accountId.value().toString())
+        );
+
+        final var result = this.transactionRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+    }
+
+    @Test
+    void givenTransactions_whenFilterByFromAccountId_thenShouldReturnOnlyMatching() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.transactionRepository().save(
+                Transaction.newTransaction(
+                        accountId,
+                        new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        new Money(new BigDecimal(10)),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        "idemp-from"
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc",
+                Map.of(
+                        "accountId", accountId.value().toString(),
+                        "fromAccountId", accountId.value().toString()
+                )
+        );
+
+        final var result = this.transactionRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+    }
+
+    @Test
+    void givenTransactions_whenFilterByToAccountId_thenShouldReturnOnlyMatching() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.transactionRepository().save(
+                Transaction.newTransaction(
+                        new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                        accountId,
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        new Money(new BigDecimal(10)),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        "idemp-to"
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "createdAt",
+                "asc",
+                Map.of(
+                        "accountId", accountId.value().toString(),
+                        "toAccountId", accountId.value().toString()
+                )
+        );
+
+        final var result = this.transactionRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+    }
+
+    @Test
+    void givenTransactions_whenTermsIsIdempotencyKey_thenShouldReturnOnlyMatching() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.transactionRepository().save(
+                Transaction.newTransaction(
+                        accountId,
+                        new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        new Money(new BigDecimal(10)),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        "idemp-terms"
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                "idemp-terms",
+                "createdAt",
+                "asc",
+                Map.of("accountId", accountId.value().toString())
+        );
+
+        final var result = this.transactionRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+    }
+
+    @Test
+    void givenTransactions_whenOrderByIsUpdatedAt_thenShouldReturnOrdered() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.transactionRepository().save(
+                Transaction.newTransaction(
+                        accountId,
+                        new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        new Money(new BigDecimal(10)),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        "idemp-order"
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "updatedAt",
+                "desc",
+                Map.of("accountId", accountId.value().toString())
+        );
+
+        final var result = this.transactionRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+    }
+
+    @Test
+    void givenTransactions_whenOrderByIsStatus_thenShouldReturnOrdered() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.transactionRepository().save(
+                Transaction.newTransaction(
+                        accountId,
+                        new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        new Money(new BigDecimal(10)),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        "idemp-order-status"
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "status",
+                "asc",
+                Map.of("accountId", accountId.value().toString())
+        );
+
+        final var result = this.transactionRepository().listAll(query);
+
+        Assertions.assertEquals(1, result.items().size());
+    }
+
+    @Test
+    void givenTransactions_whenOrderByIsAmount_thenShouldReturnOrdered() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.transactionRepository().save(
+                Transaction.newTransaction(
+                        accountId,
+                        new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()),
+                        new Money(new BigDecimal(10)),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        "idemp-order-amount"
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "amount",
+                "desc",
                 Map.of("accountId", accountId.value().toString())
         );
 
