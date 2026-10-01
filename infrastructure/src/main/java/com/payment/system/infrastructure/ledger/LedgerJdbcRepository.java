@@ -11,11 +11,10 @@ import com.payment.system.domain.ledger.ReservationStatus;
 import com.payment.system.domain.transactions.TransactionId;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
 import com.payment.system.infrastructure.jdbc.JdbcUtils;
+import com.payment.system.infrastructure.jdbc.RowMap;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -251,7 +250,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
     @Override
     public Optional<LedgerReservation> findReservationByTransactionId(final TransactionId transactionId) {
         final var sql = "SELECT * FROM ledger_reservations WHERE transaction_id = :transactionId";
-        return this.databaseClient.queryOne(sql, Map.of("transactionId", transactionId.value().toString()), this::mapReservation);
+        return this.databaseClient.queryOne(sql, Map.of("transactionId", transactionId.value().toString()), mapReservation());
     }
 
     // TODO implement this
@@ -311,8 +310,8 @@ public class LedgerJdbcRepository implements LedgerRepository {
         );
     }
 
-    private LedgerReservation mapReservation(final ResultSet rs) throws SQLException {
-        return LedgerReservation.with(
+    private RowMap<LedgerReservation> mapReservation() {
+        return rs -> LedgerReservation.with(
                 new LedgerReservationId(Ulid.from(rs.getString("id"))),
                 0L, // Versão não persistida no banco por enquanto
                 new TransactionId(Ulid.from(rs.getString("transaction_id"))),
