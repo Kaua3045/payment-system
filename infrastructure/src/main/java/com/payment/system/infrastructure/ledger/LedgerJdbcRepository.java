@@ -10,15 +10,25 @@ import com.payment.system.domain.ledger.LedgerReservationId;
 import com.payment.system.domain.ledger.ReservationStatus;
 import com.payment.system.domain.transactions.TransactionId;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
+import com.payment.system.infrastructure.jdbc.JdbcUtils;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
+// TODO h2 tests does not support RETURNING clause,
+//  so we need to use a separate query to fetch the reservation
+//  after updating its status. Consider using a different approach or
+//  database for testing that supports this feature.
+// TODO and create, confirm and cancel reservation need ledger snapshot created, on if not exists,
+//  this methods returning insufficient funds exception, because the snapshot is not created yet,
+//  decide if create snapshot on create account with event or sync or make update snapshot create
+//  if not exists, or make a separate method to create snapshot on demand
 @Component
 public class LedgerJdbcRepository implements LedgerRepository {
 
@@ -57,10 +67,10 @@ public class LedgerJdbcRepository implements LedgerRepository {
     @Override
     public BigDecimal calculateBalance(final AccountId accountId) {
         final var sql = """
-            SELECT balance - reserved_balance
-            FROM ledger_snapshots
-            WHERE account_id = :accountId
-            """;
+                SELECT balance - reserved_balance
+                FROM ledger_snapshots
+                WHERE account_id = :accountId
+                """;
 
         return this.databaseClient.queryOne(
                 sql,
@@ -72,13 +82,13 @@ public class LedgerJdbcRepository implements LedgerRepository {
     @Override
     public void createReservation(final LedgerReservation reservation) {
         final var sql = """
-            UPDATE ledger_snapshots
-            SET
-                reserved_balance = reserved_balance + :amount,
-                updated_at = NOW()
-            WHERE account_id = :accountId
-              AND balance - reserved_balance >= :amount
-            """;
+                UPDATE ledger_snapshots
+                SET
+                    reserved_balance = reserved_balance + :amount,
+                    updated_at = NOW()
+                WHERE account_id = :accountId
+                  AND balance - reserved_balance >= :amount
+                """;
 
         final var updated = this.databaseClient.update(
                 sql,
@@ -93,25 +103,25 @@ public class LedgerJdbcRepository implements LedgerRepository {
         }
 
         final var insertSql = """
-            INSERT INTO ledger_reservations (
-                id,
-                transaction_id,
-                account_id,
-                amount,
-                status,
-                created_at,
-                expires_at
-            )
-            VALUES (
-                :id,
-                :transactionId,
-                :accountId,
-                :amount,
-                :status,
-                :createdAt,
-                :expiresAt
-            )
-            """;
+                INSERT INTO ledger_reservations (
+                    id,
+                    transaction_id,
+                    account_id,
+                    amount,
+                    status,
+                    created_at,
+                    expires_at
+                )
+                VALUES (
+                    :id,
+                    :transactionId,
+                    :accountId,
+                    :amount,
+                    :status,
+                    :createdAt,
+                    :expiresAt
+                )
+                """;
 
         this.databaseClient.update(
                 insertSql,
@@ -122,15 +132,19 @@ public class LedgerJdbcRepository implements LedgerRepository {
     @Override
     public void confirmReservation(final TransactionId transactionId) {
         final var sql = """
-            UPDATE ledger_reservations
-            SET status = 'CONFIRMED'
-            WHERE transaction_id = :transactionId
-              AND status = 'PENDING'
-            RETURNING account_id, amount
-            """;
+                UPDATE ledger_reservations
+                SET status = 'CONFIRMED'
+                WHERE transaction_id = :transactionId
+                  AND status = 'PENDING'
+                """;
+
+        this.databaseClient.update(
+                sql,
+                Map.of("transactionId", transactionId.value().toString())
+        );
 
         final var reservation = this.databaseClient.queryOne(
-                sql,
+                "SELECT account_id, amount FROM ledger_reservations WHERE transaction_id = :transactionId AND status = 'CONFIRMED'",
                 Map.of("transactionId", transactionId.value().toString()),
                 rs -> Map.of(
                         "accountId", rs.getString("account_id"),
@@ -138,13 +152,31 @@ public class LedgerJdbcRepository implements LedgerRepository {
                 )
         ).orElseThrow();
 
+
+//        final var sql = """
+//                UPDATE ledger_reservations
+//                SET status = 'CONFIRMED'
+//                WHERE transaction_id = :transactionId
+//                  AND status = 'PENDING'
+//                RETURNING account_id, amount
+//                """;
+
+//        final var reservation = this.databaseClient.queryOne(
+//                sql,
+//                Map.of("transactionId", transactionId.value().toString()),
+//                rs -> Map.of(
+//                        "accountId", rs.getString("account_id"),
+//                        "amount", rs.getBigDecimal("amount")
+//                )
+//        ).orElseThrow();
+
         final var releaseSql = """
-            UPDATE ledger_snapshots
-            SET
-                reserved_balance = reserved_balance - :amount,
-                updated_at = NOW()
-            WHERE account_id = :accountId
-            """;
+                UPDATE ledger_snapshots
+                SET
+                    reserved_balance = reserved_balance - :amount,
+                    updated_at = NOW()
+                WHERE account_id = :accountId
+                """;
 
         this.databaseClient.update(
                 releaseSql,
@@ -158,15 +190,19 @@ public class LedgerJdbcRepository implements LedgerRepository {
     @Override
     public void cancelReservation(final TransactionId transactionId) {
         final var sql = """
-            UPDATE ledger_reservations
-            SET status = 'CANCELLED'
-            WHERE transaction_id = :transactionId
-              AND status = 'PENDING'
-            RETURNING account_id, amount
-            """;
+                UPDATE ledger_reservations
+                SET status = 'CANCELLED'
+                WHERE transaction_id = :transactionId
+                  AND status = 'PENDING'
+                """;
+
+        this.databaseClient.update(
+                sql,
+                Map.of("transactionId", transactionId.value().toString())
+        );
 
         final var reservation = this.databaseClient.queryOne(
-                sql,
+                "SELECT account_id, amount FROM ledger_reservations WHERE transaction_id = :transactionId AND status = 'CANCELLED'",
                 Map.of("transactionId", transactionId.value().toString()),
                 rs -> Map.of(
                         "accountId", rs.getString("account_id"),
@@ -174,17 +210,34 @@ public class LedgerJdbcRepository implements LedgerRepository {
                 )
         ).orElse(null);
 
+//        final var sql = """
+//                UPDATE ledger_reservations
+//                SET status = 'CANCELLED'
+//                WHERE transaction_id = :transactionId
+//                  AND status = 'PENDING'
+//                RETURNING account_id, amount
+//                """;
+//
+//        final var reservation = this.databaseClient.queryOne(
+//                sql,
+//                Map.of("transactionId", transactionId.value().toString()),
+//                rs -> Map.of(
+//                        "accountId", rs.getString("account_id"),
+//                        "amount", rs.getBigDecimal("amount")
+//                )
+//        ).orElse(null);
+
         if (reservation == null) {
             return;
         }
 
         final var releaseSql = """
-            UPDATE ledger_snapshots
-            SET
-                reserved_balance = reserved_balance - :amount,
-                updated_at = NOW()
-            WHERE account_id = :accountId
-            """;
+                UPDATE ledger_snapshots
+                SET
+                    reserved_balance = reserved_balance - :amount,
+                    updated_at = NOW()
+                WHERE account_id = :accountId
+                """;
 
         this.databaseClient.update(
                 releaseSql,
@@ -240,13 +293,13 @@ public class LedgerJdbcRepository implements LedgerRepository {
 
     private void updateSnapshot(final LedgerEntry entry) {
         final var sql = """
-            UPDATE ledger_snapshots
-            SET
-                balance = balance + :amount,
-                last_ledger_id = :ledgerId,
-                updated_at = NOW()
-            WHERE account_id = :accountId
-            """;
+                UPDATE ledger_snapshots
+                SET
+                    balance = balance + :amount,
+                    last_ledger_id = :ledgerId,
+                    updated_at = NOW()
+                WHERE account_id = :accountId
+                """;
 
         this.databaseClient.update(
                 sql,
@@ -265,8 +318,8 @@ public class LedgerJdbcRepository implements LedgerRepository {
                 new TransactionId(Ulid.from(rs.getString("transaction_id"))),
                 new AccountId(Ulid.from(rs.getString("account_id"))),
                 rs.getBigDecimal("amount"),
-                rs.getTimestamp("created_at").toInstant(),
-                rs.getTimestamp("expires_at").toInstant(),
+                JdbcUtils.getInstant(rs, "created_at"),
+                JdbcUtils.getInstant(rs, "expires_at"),
                 ReservationStatus.valueOf(rs.getString("status"))
         );
     }
@@ -278,7 +331,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
         params.put("transactionId", entry.getTransactionId().value().toString());
         params.put("amount", entry.getAmount());
         params.put("type", entry.getType().name());
-        params.put("createdAt", Timestamp.from(entry.getCreatedAt()));
+        params.put("createdAt", OffsetDateTime.ofInstant(entry.getCreatedAt(), ZoneOffset.UTC));
         return params;
     }
 
@@ -289,8 +342,8 @@ public class LedgerJdbcRepository implements LedgerRepository {
         params.put("accountId", reservation.getAccountId().value().toString());
         params.put("amount", reservation.getAmount());
         params.put("status", reservation.getStatus().name());
-        params.put("createdAt", Timestamp.from(reservation.getCreatedAt()));
-        params.put("expiresAt", Timestamp.from(reservation.getExpiresAt()));
+        params.put("createdAt", OffsetDateTime.ofInstant(reservation.getCreatedAt(), ZoneOffset.UTC));
+        params.put("expiresAt", OffsetDateTime.ofInstant(reservation.getExpiresAt(), ZoneOffset.UTC));
         return params;
     }
 }
