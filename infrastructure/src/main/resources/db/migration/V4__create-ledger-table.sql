@@ -6,8 +6,7 @@ CREATE TABLE ledger_reservations
     amount         NUMERIC(19, 4)           NOT NULL,
     status         VARCHAR(20)              NOT NULL, -- PENDING, CONFIRMED, CANCELLED
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL,
-    expires_at     TIMESTAMP WITH TIME ZONE NOT NULL,
-    CONSTRAINT fk_ledger_res_account_id FOREIGN KEY (account_id) REFERENCES accounts (id)
+    expires_at     TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE ledger_entries
@@ -17,9 +16,7 @@ CREATE TABLE ledger_entries
     transaction_id VARCHAR(26)              NOT NULL,
     amount         NUMERIC(19, 4)           NOT NULL,
     type           VARCHAR(10)              NOT NULL, -- DEBIT, CREDIT
-    created_at     TIMESTAMP WITH TIME ZONE NOT NULL,
-    CONSTRAINT fk_ledger_account_id FOREIGN KEY (account_id) REFERENCES accounts (id),
-    CONSTRAINT fk_ledger_transaction_id FOREIGN KEY (transaction_id) REFERENCES transactions (id)
+    created_at     TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE ledger_snapshots
@@ -28,8 +25,7 @@ CREATE TABLE ledger_snapshots
     last_ledger_id   VARCHAR(26)              NOT NULL,
     balance          NUMERIC(19, 4)           NOT NULL,
     reserved_balance NUMERIC(19, 4)           NOT NULL DEFAULT 0,
-    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL,
-    CONSTRAINT fk_ledger_snapshots_account_id FOREIGN KEY (account_id) REFERENCES accounts (id)
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE INDEX idx_ledger_entries_account_id_id ON ledger_entries (account_id, id);
