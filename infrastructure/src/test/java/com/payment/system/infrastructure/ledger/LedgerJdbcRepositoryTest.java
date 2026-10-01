@@ -265,4 +265,13 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
 
         Assertions.assertTrue(aFoundReservation.isEmpty());
     }
+
+    @Test
+    void givenAnInvalidReservationReturnNull_whenCallsCancelReservation_thenShouldNotThrowException() {
+        Assertions.assertEquals(0, countLedgerReservations());
+
+        this.ledgerRepository().cancelReservation(
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID())
+        );
+    }
 }
