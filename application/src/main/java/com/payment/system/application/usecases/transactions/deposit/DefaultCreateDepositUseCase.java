@@ -1,23 +1,24 @@
 package com.payment.system.application.usecases.transactions.deposit;
 
+import com.payment.system.application.exceptions.AccountIsNotActiveException;
+import com.payment.system.application.exceptions.PixKeyIsNotActiveException;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
+import com.payment.system.application.gateways.AccountGateway;
+import com.payment.system.application.gateways.PixKeyGateway;
 import com.payment.system.application.helpers.ErrorClassifier;
 import com.payment.system.application.helpers.ErrorType;
-import com.payment.system.application.repositories.AccountRepository;
-import com.payment.system.application.repositories.PixKeyRepository;
+import com.payment.system.application.repositories.LedgerRepository;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TransactionManager;
-import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
+import com.payment.system.domain.exceptions.InsufficientFundsException;
 import com.payment.system.domain.exceptions.NotFoundException;
-import com.payment.system.domain.pixkeys.PixKey;
-import com.payment.system.domain.pixkeys.PixKeyType;
-import com.payment.system.domain.pixkeys.PixKeyValueFactory;
+import com.payment.system.domain.ledger.LedgerEntry;
 import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionType;
@@ -30,24 +31,27 @@ import java.util.Objects;
 
 public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
 
-    private final AccountRepository accountRepository;
-    private final PixKeyRepository pixKeyRepository;
+    private final AccountGateway accountGateway;
+    private final PixKeyGateway pixKeyGateway;
     private final TransactionRepository transactionRepository;
+    private final LedgerRepository ledgerRepository;
     private final TransactionManager transactionManager;
     private final Metrics metrics;
 
     public DefaultCreateDepositUseCase(
-            final AccountRepository accountRepository,
-            final PixKeyRepository pixKeyRepository,
+            final AccountGateway accountGateway,
+            final PixKeyGateway pixKeyGateway,
             final TransactionRepository transactionRepository,
+            final LedgerRepository ledgerRepository,
             final TransactionManager transactionManager,
             final Metrics metrics,
             final ApplicationLogger logger
     ) {
         super(logger);
-        this.accountRepository = Objects.requireNonNull(accountRepository);
-        this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
+        this.accountGateway = Objects.requireNonNull(accountGateway);
+        this.pixKeyGateway = Objects.requireNonNull(pixKeyGateway);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
+        this.ledgerRepository = Objects.requireNonNull(ledgerRepository);
         this.transactionManager = Objects.requireNonNull(transactionManager);
         this.metrics = Objects.requireNonNull(metrics);
     }
@@ -73,39 +77,33 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
                 final var aSource = DepositSource.from(input.source())
                         .orElseThrow(() -> NotFoundException.with("DepositSource %s not found".formatted(input.source())));
 
-                final var aPixKeyType = PixKeyType.from(input.pixKeyType())
-                        .orElseThrow(() -> NotFoundException.with("PixKeyType %s not found".formatted(input.pixKeyType())));
+                final var aPixKey = this.pixKeyGateway.pixKeyOfActiveByValue(input.pixKeyType(), input.pixKey());
 
-                final var aKey = new PixKeyValueFactory().create(aPixKeyType, input.pixKey());
+                if (!aPixKey.active()) {
+                    throw new PixKeyIsNotActiveException(input.pixKey());
+                }
 
-                final var aPixKey = this.pixKeyRepository.pixKeyOfActiveByValue(aKey.value())
-                        .orElseThrow(NotFoundException.with(PixKey.class, "value", input.pixKey()));
+                final var aToAccount = this.accountGateway.accountOfId(aPixKey.accountId());
 
-                final var aToAccount = this.accountRepository.accountOfId(aPixKey.getAccountId().value().toString())
-                        .orElseThrow(NotFoundException.with(Account.class, aPixKey.getAccountId().value().toString()));
-
-                if (!aToAccount.getStatus().equals(AccountStatus.ACTIVE)) {
-                    throw DomainException.with("To account is not active");
+                if (!aToAccount.status().equals(AccountStatus.ACTIVE)) {
+                    throw new AccountIsNotActiveException("To");
                 }
 
                 final var aTransaction = Transaction.newTransaction(
                         AccountId.system(),
-                        aToAccount.getId(),
-                        aPixKey.getId(),
+                        aToAccount.accountId(),
+                        aPixKey.pixKeyId(),
                         new Money(input.amount()),
                         TransactionType.TRANSFER,
                         aSource,
                         input.idempotencyKey()
                 );
 
-                this.transactionRepository.save(aTransaction);
-
-                aToAccount.credit(input.amount());
-
-                this.accountRepository.save(aToAccount);
-
                 aTransaction.complete();
                 this.transactionRepository.save(aTransaction);
+
+                final var aCreditEntry = LedgerEntry.newCredit(aToAccount.accountId(), aTransaction.getId(), input.amount());
+                this.ledgerRepository.save(aCreditEntry);
 
                 this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of("usecase", "deposit_create"));
                 this.metrics.incrementCounter("transaction_amount_total", aTransaction.getAmount().amount().longValue(),
@@ -113,7 +111,7 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
 
                 logger.info("event=deposit_completed transactionId={} toAccountId={} amount={} idempotencyKey={}",
                         aTransaction.getId().value().toString(),
-                        aToAccount.getId().value().toString(),
+                        aToAccount.accountId().value().toString(),
                         aTransaction.getAmount().amount(),
                         aTransaction.getIdempotencyKey()
                 );
@@ -180,17 +178,15 @@ public class DefaultCreateDepositUseCase extends CreateDepositUseCase {
             return "not_found";
         }
 
-        if (ex instanceof DomainException domain) {
-            final var aMessage = domain.getMessage().toLowerCase();
+        if (ex instanceof AccountIsNotActiveException) {
+            return "account_inactive";
+        }
 
-            if (aMessage.contains("not active")) {
-                return "account_inactive";
-            }
+        if (ex instanceof InsufficientFundsException) {
+            return "insufficient_balance";
+        }
 
-            if (aMessage.contains("insufficient")) {
-                return "insufficient_balance";
-            }
-
+        if (ex instanceof DomainException) {
             return "business_rule";
         }
 

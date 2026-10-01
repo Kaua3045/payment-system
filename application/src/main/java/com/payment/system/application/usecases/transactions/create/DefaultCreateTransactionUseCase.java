@@ -1,23 +1,25 @@
 package com.payment.system.application.usecases.transactions.create;
 
+import com.payment.system.application.exceptions.AccountIsNotActiveException;
+import com.payment.system.application.exceptions.PixKeyIsNotActiveException;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
+import com.payment.system.application.gateways.AccountGateway;
+import com.payment.system.application.gateways.PixKeyGateway;
 import com.payment.system.application.helpers.ErrorClassifier;
 import com.payment.system.application.helpers.ErrorType;
-import com.payment.system.application.repositories.AccountRepository;
-import com.payment.system.application.repositories.PixKeyRepository;
+import com.payment.system.application.repositories.LedgerRepository;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.application.wrapper.Metrics;
 import com.payment.system.application.wrapper.TracerWrapper;
 import com.payment.system.application.wrapper.TransactionManager;
-import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
+import com.payment.system.domain.exceptions.InsufficientFundsException;
 import com.payment.system.domain.exceptions.NotFoundException;
-import com.payment.system.domain.pixkeys.PixKey;
-import com.payment.system.domain.pixkeys.PixKeyType;
-import com.payment.system.domain.pixkeys.PixKeyValueFactory;
+import com.payment.system.domain.ledger.LedgerEntry;
+import com.payment.system.domain.ledger.LedgerReservation;
 import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionType;
@@ -25,30 +27,40 @@ import com.payment.system.domain.utils.Generated;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
-    private final AccountRepository accountRepository;
-    private final PixKeyRepository pixKeyRepository;
+    private final AccountGateway accountGateway;
+    private final PixKeyGateway pixKeyGateway;
+
     private final TransactionRepository transactionRepository;
+    private final LedgerRepository ledgerRepository;
+
     private final TransactionManager transactionManager;
+
     private final Metrics metrics;
     private final TracerWrapper trace;
 
     public DefaultCreateTransactionUseCase(
-            final AccountRepository accountRepository,
-            final PixKeyRepository pixKeyRepository,
+            final AccountGateway accountGateway,
+            final PixKeyGateway pixKeyGateway,
             final TransactionRepository transactionRepository,
+            final LedgerRepository ledgerRepository,
             final TransactionManager transactionManager,
             final Metrics metrics,
-            final ApplicationLogger logger, TracerWrapper trace
+            final ApplicationLogger logger,
+            final TracerWrapper trace
     ) {
         super(logger);
-        this.accountRepository = Objects.requireNonNull(accountRepository);
-        this.pixKeyRepository = Objects.requireNonNull(pixKeyRepository);
+        this.accountGateway = Objects.requireNonNull(accountGateway);
+        this.pixKeyGateway = Objects.requireNonNull(pixKeyGateway);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
+        this.ledgerRepository = Objects.requireNonNull(ledgerRepository);
         this.transactionManager = Objects.requireNonNull(transactionManager);
         this.metrics = Objects.requireNonNull(metrics);
         this.trace = trace;
@@ -75,46 +87,58 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                     throw DomainException.with("Amount must be greater than zero");
                 }
 
-                final var aPixKeyType = PixKeyType.from(input.pixKeyType())
-                        .orElseThrow(() -> NotFoundException.with("PixKeyType %s not found".formatted(input.pixKeyType())));
+                final var aPixKeyResponse = span.runInSpan("gateway.pixkey.find", () -> this.pixKeyGateway.pixKeyOfActiveByValue(input.pixKeyType(), input.pixKey()));
 
-                final var aKey = new PixKeyValueFactory().create(aPixKeyType, input.pixKey());
+                if (!aPixKeyResponse.active()) {
+                    throw new PixKeyIsNotActiveException(input.pixKey());
+                }
+
+                final var aFromAccount = span.runInSpan("gateway.account.find-source", () -> this.accountGateway.accountOfId(input.fromAccountId()));
+
+                if (!aFromAccount.status().equals(AccountStatus.ACTIVE)) {
+                    throw new AccountIsNotActiveException("From");
+                }
+
+                final var aToAccount = span.runInSpan("gateway.account.find-destination", () -> this.accountGateway.accountOfId(aPixKeyResponse.accountId()));
+
+                if (!aToAccount.status().equals(AccountStatus.ACTIVE)) {
+                    throw new AccountIsNotActiveException("To");
+                }
+
+                // TODO: [FRAUDE] Verificação síncrona de risco antes da reserva
+
+                final var aTransaction = Transaction.newTransaction(
+                        aFromAccount.accountId(),
+                        aToAccount.accountId(),
+                        aPixKeyResponse.pixKeyId(),
+                        new Money(input.amount()),
+                        TransactionType.TRANSFER,
+                        DepositSource.EXTERNAL,
+                        input.idempotencyKey()
+                );
+
+                final var aReservation = LedgerReservation.newReservation(
+                        aTransaction.getId(),
+                        aFromAccount.accountId(),
+                        input.amount(),
+                        Instant.now().plus(10, ChronoUnit.MINUTES)
+                );
 
                 return this.transactionManager.execute(() -> {
-                    final var aFromAccount = span.runInSpan("db.account.find-source", () -> this.accountRepository.accountOfId(input.fromAccountId())
-                            .orElseThrow(NotFoundException.with(Account.class, input.fromAccountId())));
-
-                    if (!aFromAccount.getStatus().equals(AccountStatus.ACTIVE)) {
-                        throw DomainException.with("From account is not active");
-                    }
-
-                    final var aPixKey = span.runInSpan("db.pixkey.find", () -> this.pixKeyRepository.pixKeyOfActiveByValue(aKey.value())
-                            .orElseThrow(NotFoundException.with(PixKey.class, "value", input.pixKey())));
-
-                    final var aToAccount = span.runInSpan("db.account.find-destination", () -> this.accountRepository.accountOfId(aPixKey.getAccountId().value().toString())
-                            .orElseThrow(NotFoundException.with(Account.class, aPixKey.getAccountId().value().toString())));
-
-                    if (!aToAccount.getStatus().equals(AccountStatus.ACTIVE)) {
-                        throw DomainException.with("To account is not active");
-                    }
-
-                    final var aTransaction = Transaction.newTransaction(
-                            aFromAccount.getId(),
-                            aToAccount.getId(),
-                            aPixKey.getId(),
-                            new Money(input.amount()),
-                            TransactionType.TRANSFER,
-                            DepositSource.EXTERNAL,
-                            input.idempotencyKey()
-                    );
-
-                    aFromAccount.debit(input.amount());
-                    aToAccount.credit(input.amount());
-
-                    span.runInSpan("db.accounts.apply-transfer", () -> this.accountRepository.applyTransfer(aFromAccount, aToAccount));
+                    this.ledgerRepository.createReservation(aReservation);
 
                     aTransaction.complete();
                     span.runInSpan("db.transaction.save", () -> this.transactionRepository.save(aTransaction));
+
+                    final var debitEntry = LedgerEntry.newDebit(aFromAccount.accountId(), aTransaction.getId(), input.amount());
+                    final var creditEntry = LedgerEntry.newCredit(aToAccount.accountId(), aTransaction.getId(), input.amount());
+
+                    this.ledgerRepository.saveAll(List.of(debitEntry, creditEntry));
+
+                    // 3. CONFIRMAÇÃO DA RESERVA
+                    this.ledgerRepository.confirmReservation(aTransaction.getId());
+
+                    // TODO: [FRAUDE] Disparar evento para análise assíncrona
 
                     this.metrics.incrementCounter("application_usecase_invocations_total_success", 1, Map.of(
                             "usecase", "pix_transfer"
@@ -124,8 +148,8 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
                     logger.info("event=pix_transfer_completed transactionId={} fromAccountId={} toAccountId={} amount={} idempotencyKey={}",
                             aTransaction.getId().value().toString(),
-                            aFromAccount.getId().value().toString(),
-                            aToAccount.getId().value().toString(),
+                            aFromAccount.accountId().value().toString(),
+                            aToAccount.accountId().value().toString(),
                             aTransaction.getAmount().amount(),
                             aTransaction.getIdempotencyKey()
                     );
@@ -133,6 +157,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 });
             } catch (final Exception ex) {
                 if (ex instanceof ConflictException conflictException) {
+                    // TODO hoje apos as modificacoes, so se for idempotency key
                     logger.warn("event=pix_transfer_conflict reason={} idempotencyKey={}",
                             conflictException.getMessage(),
                             input.idempotencyKey()
@@ -185,17 +210,15 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
             return "not_found";
         }
 
-        if (ex instanceof DomainException domain) {
-            final var aMessage = domain.getMessage().toLowerCase();
+        if (ex instanceof InsufficientFundsException) {
+            return "insufficient_balance";
+        }
 
-            if (aMessage.contains("not active")) {
-                return "account_inactive";
-            }
+        if (ex instanceof AccountIsNotActiveException) {
+            return "account_inactive";
+        }
 
-            if (aMessage.contains("insufficient")) {
-                return "insufficient_balance";
-            }
-
+        if (ex instanceof DomainException) {
             return "business_rule";
         }
 

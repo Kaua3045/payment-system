@@ -2,7 +2,7 @@ package com.payment.system.domain.accounts;
 
 import com.payment.system.domain.AggregateRoot;
 import com.payment.system.domain.exceptions.DomainException;
-import com.payment.system.domain.exceptions.ValidationException;
+import com.payment.system.domain.exceptions.InsufficientFundsException;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.ValidationHandler;
@@ -81,7 +81,7 @@ public class Account extends AggregateRoot<AccountId> {
 
     public void debit(final BigDecimal aAmount) {
         if (balance.amount().compareTo(aAmount) < 0) {
-            throw ValidationException.with("Insufficient funds");
+            throw new InsufficientFundsException();
         }
         this.setBalance(balance.subtract(new Money(aAmount)));
         this.setUpdatedAt(InstantUtils.now());

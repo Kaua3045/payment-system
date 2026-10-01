@@ -1,8 +1,8 @@
 package com.payment.system.infrastructure.configurations.usecases;
 
-import com.payment.system.application.repositories.AccountRepository;
-import com.payment.system.application.repositories.PixKeyRepository;
-import com.payment.system.application.repositories.TransactionRepository;
+import com.payment.system.application.gateways.AccountGateway;
+import com.payment.system.application.gateways.PixKeyGateway;
+import com.payment.system.application.repositories.*;
 import com.payment.system.application.usecases.transactions.create.CreateTransactionUseCase;
 import com.payment.system.application.usecases.transactions.create.DefaultCreateTransactionUseCase;
 import com.payment.system.application.usecases.transactions.deposit.CreateDepositUseCase;
@@ -23,17 +23,19 @@ public class TransactionUseCaseConfig {
 
     @Bean
     public CreateTransactionUseCase createTransactionUseCase(
-            final AccountRepository accountRepository,
-            final PixKeyRepository pixKeyRepository,
+            final AccountGateway accountGateway,
+            final PixKeyGateway pixKeyGateway,
             final TransactionRepository transactionRepository,
+            final LedgerRepository ledgerRepository,
             final TransactionManager transactionManager,
             final Metrics metrics,
             final TracerWrapper tracerWrapper
             ) {
         return new DefaultCreateTransactionUseCase(
-                accountRepository,
-                pixKeyRepository,
+                accountGateway,
+                pixKeyGateway,
                 transactionRepository,
+                ledgerRepository,
                 transactionManager,
                 metrics,
                 new Slf4jApplicationLogger(CreateTransactionUseCase.class),
@@ -53,16 +55,18 @@ public class TransactionUseCaseConfig {
 
     @Bean
     public CreateDepositUseCase createDepositUseCase(
-            final AccountRepository accountRepository,
-            final PixKeyRepository pixKeyRepository,
+            final AccountGateway accountGateway,
+            final PixKeyGateway pixKeyGateway,
             final TransactionRepository transactionRepository,
+            final LedgerRepository ledgerRepository,
             final TransactionManager transactionManager,
             final Metrics metrics
     ) {
         return new DefaultCreateDepositUseCase(
-                accountRepository,
-                pixKeyRepository,
+                accountGateway,
+                pixKeyGateway,
                 transactionRepository,
+                ledgerRepository,
                 transactionManager,
                 metrics,
                 new Slf4jApplicationLogger(CreateDepositUseCase.class)
