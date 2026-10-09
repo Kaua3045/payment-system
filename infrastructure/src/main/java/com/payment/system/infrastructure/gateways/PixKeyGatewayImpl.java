@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.gateways;
 
+import com.payment.system.application.exceptions.PixKeyIsNotActiveException;
 import com.payment.system.application.gateways.PixKeyGateway;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.domain.exceptions.NotFoundException;
@@ -28,8 +29,12 @@ public class PixKeyGatewayImpl implements PixKeyGateway {
         final var aPixKey = this.pixKeyRepository.pixKeyOfActiveByValue(aKey.value())
                 .orElseThrow(NotFoundException.with(PixKey.class, "value", aValue));
 
+        if (!aPixKey.getStatus().equals(PixKeyStatus.ACTIVE)) {
+            throw new PixKeyIsNotActiveException(aValue);
+        }
+
         return new PixKeyActiveResponse(
-                aPixKey.getStatus().equals(PixKeyStatus.ACTIVE),
+                true,
                 aPixKey.getId(),
                 aPixKey.getAccountId().value().toString()
         );
