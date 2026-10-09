@@ -88,13 +88,51 @@ class MoneyTest extends UnitTest {
     }
 
     @Test
-    void givenNegativeAmount_whenCreateMoney_thenShouldReceiveError() {
+    void givenThreeDecimalAmount_whenCreateMoney_thenShouldReceiveError() {
         final var aProperty = "amount";
-        final var aMessage = "should be greater than or equal to zero";
+        final var aMessage = "should not have more than 2 decimal places";
 
-        final var aException = Assertions.assertThrows(ValidationException.class, () -> new Money(new BigDecimal("-1")));
+        final var aException = Assertions.assertThrows(ValidationException.class, () -> Money.of(new BigDecimal("1.123")));
 
         assertEquals(aMessage, aException.getErrors().getFirst().message());
         assertEquals(aProperty, aException.getErrors().getFirst().property());
+    }
+
+    @Test
+    void givenMoney_whenCallMinor_thenReturnMoneyWithMinorAmount() {
+        final var money = new Money(new BigDecimal("10.25"));
+
+        final var actual = money.minorUnits();
+
+        assertEquals(1025, actual);
+    }
+
+    @Test
+    void givenMoney_whenCallNegate_thenReturnMoneyWithNegatedAmount() {
+        final var money = new Money(new BigDecimal("10.25"));
+
+        final var actual = money.negate();
+
+        assertEquals(-10.25, actual.amount().doubleValue());
+    }
+
+    @Test
+    void givenMoney_whenCallGreaterThan__thenReturnTrueIfGreater() {
+        final var moneyOne = new Money(new BigDecimal("10.0"));
+        final var moneyTwo = new Money(new BigDecimal("5.0"));
+
+        final var actual = moneyOne.isGreaterThan(moneyTwo);
+
+        assertTrue(actual);
+    }
+
+    @Test
+    void givenMoney_whenCallLessThanOrEqual_thenReturnTrueIfLessOrEqual() {
+        final var moneyOne = new Money(new BigDecimal("5.0"));
+        final var moneyTwo = new Money(new BigDecimal("10.0"));
+
+        final var actual = moneyOne.isLessThanOrEqual(moneyTwo);
+
+        assertTrue(actual);
     }
 }
