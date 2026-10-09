@@ -9,7 +9,16 @@ public record Money(BigDecimal amount) implements ValueObject {
 
     public Money {
         this.assertArgumentNotNull(amount, "amount", "should not be null");
-        this.assertArgumentTrue(amount.compareTo(BigDecimal.ZERO) >= 0, "amount", "should be greater than or equal to zero");
+        this.assertArgumentTrue(amount.scale() <= 2, "amount", "should not have more than 2 decimal places");
+        amount = amount.setScale(2, RoundingMode.UNNECESSARY);
+    }
+
+    public static Money of(BigDecimal amount) {
+        return new Money(amount);
+    }
+
+    public static Money zero() {
+        return new Money(BigDecimal.ZERO);
     }
 
     public Money add(final Money other) {
@@ -28,15 +37,23 @@ public record Money(BigDecimal amount) implements ValueObject {
         return this.amount.compareTo(other.amount) >= 0;
     }
 
+    public boolean isGreaterThan(final Money other) {
+        return this.amount.compareTo(other.amount) > 0;
+    }
+
     public boolean isLessThan(final Money other) {
         return this.amount.compareTo(other.amount) < 0;
     }
 
-    public static Money zero() {
-        return new Money(BigDecimal.ZERO);
+    public boolean isLessThanOrEqual(final Money other) {
+        return this.amount.compareTo(other.amount) <= 0;
     }
 
-    public BigDecimal amount() {
-        return this.amount.setScale(2, RoundingMode.HALF_UP);
+    public long minorUnits() {
+        return amount.movePointRight(2).longValueExact();
+    }
+
+    public Money negate() {
+        return new Money(this.amount.negate());
     }
 }
