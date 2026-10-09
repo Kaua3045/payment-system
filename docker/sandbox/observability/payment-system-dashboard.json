@@ -715,7 +715,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "(\n  sum(rate(application_usecase_errors_total{deployment_environment=~\"$environment\"}[5m])) by (usecase)\n  /\n  sum(rate(application_usecase_invocations_total{deployment_environment=~\"$environment\"}[5m])) by (usecase)\n) * 100",
+          "expr": "(\n  sum(rate(application_usecase_invocations_total{deployment_environment=~\"$environment\", outcome=\"error\"}[5m])) by (usecase)\n  /\n  sum(rate(application_usecase_invocations_total{deployment_environment=~\"$environment\"}[5m])) by (usecase)\n) * 100",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
