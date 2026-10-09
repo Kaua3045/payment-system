@@ -6,13 +6,13 @@ import com.payment.system.domain.transactions.TransactionId;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.handler.NotificationHandler;
+import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class LedgerReservationTest extends UnitTest {
 
@@ -20,7 +20,7 @@ class LedgerReservationTest extends UnitTest {
     void givenValidParameters_whenCreateLedgerReservation_thenReturnLedgerReservation() {
         final var aTransactionId = new TransactionId(IdentifierUtils.generateNewMonotonicULID());
         final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var anAmount = BigDecimal.valueOf(100);
+        final var anAmount = Money.of(BigDecimal.valueOf(100));
         final var aExpiresAt = InstantUtils.now().plus(5, ChronoUnit.MINUTES);
 
         final var aLedgerReservation = LedgerReservation.newReservation(
@@ -33,6 +33,7 @@ class LedgerReservationTest extends UnitTest {
         assertEquals(aTransactionId, aLedgerReservation.getTransactionId());
         assertEquals(aAccountId, aLedgerReservation.getAccountId());
         assertEquals(anAmount, aLedgerReservation.getAmount());
+        assertNotNull(aLedgerReservation.getCreatedAt());
         assertEquals(aExpiresAt, aLedgerReservation.getExpiresAt());
         assertEquals(ReservationStatus.PENDING, aLedgerReservation.getStatus());
         assertDoesNotThrow(() -> aLedgerReservation.validate(NotificationHandler.create()));
@@ -42,7 +43,7 @@ class LedgerReservationTest extends UnitTest {
     void givenValidParameters_whenCreateLedgerReservationWithCustomId_thenReturnLedgerReservation() {
         final var aTransactionId = new TransactionId(IdentifierUtils.generateNewMonotonicULID());
         final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var anAmount = BigDecimal.valueOf(100);
+        final var anAmount = Money.of(BigDecimal.valueOf(100));
         final var aExpiresAt = InstantUtils.now().plus(5, ChronoUnit.MINUTES);
         final var aLedgerReservationId = new LedgerReservationId(IdentifierUtils.generateNewMonotonicULID());
 
@@ -70,7 +71,7 @@ class LedgerReservationTest extends UnitTest {
     void givenAValidLedgerReservation_whenConfirm_thenStatusShouldBeConfirmed() {
         final var aTransactionId = new TransactionId(IdentifierUtils.generateNewMonotonicULID());
         final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var anAmount = BigDecimal.valueOf(100);
+        final var anAmount = Money.of(BigDecimal.valueOf(100));
         final var aExpiresAt = InstantUtils.now().plus(5, ChronoUnit.MINUTES);
 
         final var aLedgerReservation = LedgerReservation.newReservation(
@@ -89,7 +90,7 @@ class LedgerReservationTest extends UnitTest {
     void givenAValidLedgerReservation_whenCancel_thenStatusShouldBeCancelled() {
         final var aTransactionId = new TransactionId(IdentifierUtils.generateNewMonotonicULID());
         final var aAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var anAmount = BigDecimal.valueOf(100);
+        final var anAmount = Money.of(BigDecimal.valueOf(100));
         final var aExpiresAt = InstantUtils.now().plus(5, ChronoUnit.MINUTES);
 
         final var aLedgerReservation = LedgerReservation.newReservation(
