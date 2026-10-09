@@ -198,7 +198,7 @@ public class TransactionJdbcRepository implements TransactionRepository {
 
             throw ConflictException.with(
                     "Transaction with idempotencyKey %s already exists"
-                            .formatted(transaction.getIdempotencyKey())
+                            .formatted(transaction.getIdempotencyKey()), "conflict_idempotency_key"
             );
         }
     }
@@ -217,7 +217,7 @@ public class TransactionJdbcRepository implements TransactionRepository {
                     transaction.getVersion()
             );
             throw ConflictException.with("Transaction with identifier %s and version %d does not match, transaction was updated by another transaction"
-                    .formatted(transaction.getId().value(), transaction.getVersion()));
+                    .formatted(transaction.getId().value(), transaction.getVersion()), "version_conflict");
         }
     }
 
