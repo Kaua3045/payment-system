@@ -12,6 +12,7 @@ import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.DomainException;
+import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyId;
@@ -20,13 +21,11 @@ import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.utils.IdentifierUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
@@ -202,48 +201,6 @@ class CreateDepositUseCaseTest extends UseCaseTest {
     }
 
     @Test
-    void givenErrorAfterTransactionCreation_whenExecute_shouldMarkTransactionAsFailed() {
-        final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
-        final var idempotencyKey = "idem-fail";
-
-        final var transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
-
-        Mockito.when(transactionManager.execute(any()))
-                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
-
-        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
-
-        Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
-
-        Mockito.doThrow(new RuntimeException("teste"))
-                .when(ledgerRepository).save(any());
-
-        Mockito.when(transactionRepository.save(transactionCaptor.capture()))
-                .thenAnswer(returnsFirstArg());
-
-        Mockito.when(transactionRepository.transactionOfIdempotencyKey(idempotencyKey))
-                .thenAnswer(inv -> Optional.of(transactionCaptor.getValue()));
-
-        final var command = CreateDepositCommand.with(
-                "pix",
-                "random",
-                "atm",
-                BigDecimal.TEN,
-                idempotencyKey
-        );
-
-        final var aException = Assertions.assertThrows(RuntimeException.class, () -> useCase.execute(command));
-
-        Assertions.assertEquals("teste", aException.getMessage());
-
-        Mockito.verify(transactionRepository, Mockito.atLeast(2)).save(any(Transaction.class));
-        Assertions.assertEquals("FAILED", transactionCaptor.getValue().getStatus().name());
-    }
-
-    @Test
     void givenAnConflictingVersion_whenExecute_shouldThrowConflictException() {
         final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
@@ -259,7 +216,7 @@ class CreateDepositUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
 
         Mockito.when(transactionRepository.save(any()))
-                .thenThrow(ConflictException.with("Version conflict"));
+                .thenThrow(ConflictException.with("Version conflict", "version_conflict"));
 
         final var command = CreateDepositCommand.with(
                 "pix",
@@ -272,21 +229,20 @@ class CreateDepositUseCaseTest extends UseCaseTest {
         final var aException = Assertions.assertThrows(ConflictException.class, () -> useCase.execute(command));
 
         Assertions.assertEquals("Version conflict", aException.getMessage());
+        Assertions.assertEquals("version_conflict", aException.getErrorCode());
 
         Mockito.verify(transactionRepository, Mockito.times(1)).save(any());
     }
 
     @Test
     void givenAnInactivePixKey_whenExecute_shouldThrowPixKeyIsNotActiveException() {
-        final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var idempotencyKey = "idem-inactive";
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(false, pixKeyId, toAccountId.value().toString()));
+                .thenThrow(new PixKeyIsNotActiveException("pix"));
 
         final var command = CreateDepositCommand.with(
                 "pix",
@@ -301,5 +257,72 @@ class CreateDepositUseCaseTest extends UseCaseTest {
         Assertions.assertEquals("PixKey pix is not active", aException.getMessage());
 
         Mockito.verify(transactionRepository, Mockito.times(0)).save(any());
+    }
+
+    @Test
+    void givenAnInternalError_whenCreateReservation_thenThrowInternalErrorException() {
+        final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var idempotencyKey = "idem-internal-error";
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+
+        Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
+
+        Mockito.when(transactionRepository.save(any()))
+                .thenThrow(InternalErrorException.with("Database error"));
+
+        final var command = CreateDepositCommand.with(
+                "pix",
+                "random",
+                "atm",
+                BigDecimal.TEN,
+                idempotencyKey
+        );
+
+        final var aException = Assertions.assertThrows(InternalErrorException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Database error", aException.getMessage());
+        Assertions.assertEquals("internal_error", aException.getErrorCode());
+
+        Mockito.verify(transactionRepository, Mockito.times(1)).save(any());
+    }
+
+    @Test
+    void givenAnRuntimeException_whenCreateReservation_thenThrowException() {
+        final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var idempotencyKey = "idem-runtime-error";
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+
+        Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
+
+        Mockito.when(transactionRepository.save(any()))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        final var command = CreateDepositCommand.with(
+                "pix",
+                "random",
+                "atm",
+                BigDecimal.TEN,
+                idempotencyKey
+        );
+
+        final var aException = Assertions.assertThrows(RuntimeException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Unexpected error", aException.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.times(1)).save(any());
     }
 }
