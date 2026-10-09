@@ -6,15 +6,15 @@ import com.payment.system.domain.transactions.TransactionId;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.ValidationHandler;
+import com.payment.system.domain.valueobjects.Money;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
 public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
 
     private TransactionId transactionId;
     private AccountId accountId;
-    private BigDecimal amount;
+    private Money amount;
     private Instant createdAt;
     private Instant expiresAt;
     private ReservationStatus status;
@@ -24,7 +24,7 @@ public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
             final long version,
             final TransactionId transactionId,
             final AccountId accountId,
-            final BigDecimal amount,
+            final Money amount,
             final Instant createdAt,
             final Instant expiresAt,
             final ReservationStatus status
@@ -47,7 +47,7 @@ public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
             final long version,
             final TransactionId transactionId,
             final AccountId accountId,
-            final BigDecimal amount,
+            final Money amount,
             final Instant createdAt,
             final Instant expiresAt,
             final ReservationStatus status
@@ -67,7 +67,7 @@ public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
     public static LedgerReservation newReservation(
             final TransactionId transactionId,
             final AccountId accountId,
-            final BigDecimal amount,
+            final Money amount,
             final Instant expiresAt
     ) {
         return new LedgerReservation(
@@ -90,7 +90,7 @@ public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
         return accountId;
     }
 
-    public BigDecimal getAmount() {
+    public Money getAmount() {
         return amount;
     }
 
@@ -116,7 +116,7 @@ public class LedgerReservation extends AggregateRoot<LedgerReservationId> {
         this.accountId = accountId;
     }
 
-    private void setAmount(final BigDecimal amount) {
+    private void setAmount(final Money amount) {
         this.assertArgumentNotNull(amount, "amount", "should not be null");
         this.amount = amount;
     }
