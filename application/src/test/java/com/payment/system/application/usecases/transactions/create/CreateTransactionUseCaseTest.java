@@ -1,6 +1,7 @@
 package com.payment.system.application.usecases.transactions.create;
 
 import com.payment.system.application.UseCaseTest;
+import com.payment.system.application.exceptions.AccountIsNotActiveException;
 import com.payment.system.application.exceptions.PixKeyIsNotActiveException;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.gateways.AccountGateway;
@@ -13,6 +14,7 @@ import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.DomainException;
 import com.payment.system.domain.exceptions.InsufficientFundsException;
+import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NotFoundException;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyId;
@@ -176,7 +178,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "idem"
         );
 
-        Assertions.assertThrows(com.payment.system.application.exceptions.AccountIsNotActiveException.class, () -> useCase.execute(command));
+        Assertions.assertThrows(AccountIsNotActiveException.class, () -> useCase.execute(command));
     }
 
     @Test
@@ -223,7 +225,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "idem"
         );
 
-        Assertions.assertThrows(com.payment.system.application.exceptions.AccountIsNotActiveException.class, () -> useCase.execute(command));
+        Assertions.assertThrows(AccountIsNotActiveException.class, () -> useCase.execute(command));
     }
 
     @Test
@@ -261,14 +263,12 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     @Test
     void givenAnInactivePixKey_whenExecute_shouldThrowPixKeyIsNotActiveException() {
         final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
-        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(false, pixKeyId, to.value().toString()));
+                .thenThrow(new PixKeyIsNotActiveException("pix"));
 
         final var command = CreateTransactionCommand.with(
                 from.value().toString(),
@@ -279,5 +279,74 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
         );
 
         Assertions.assertThrows(PixKeyIsNotActiveException.class, () -> useCase.execute(command));
+    }
+
+    @Test
+    void givenAnInternalError_whenCreateReservation_shouldThrowInternalErrorException() {
+        final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString()));
+
+        Mockito.when(accountGateway.accountOfId(from.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from));
+
+        Mockito.when(accountGateway.accountOfId(to.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to));
+
+        Mockito.doThrow(InternalErrorException.with("Database connection error"))
+                .when(ledgerRepository).createReservation(any());
+
+        final var command = CreateTransactionCommand.with(
+                from.value().toString(),
+                "pix",
+                "random",
+                BigDecimal.TEN,
+                "idem"
+        );
+
+        final var aException = Assertions.assertThrows(InternalErrorException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Database connection error", aException.getMessage());
+        Assertions.assertEquals("internal_error", aException.getErrorCode());
+    }
+
+    @Test
+    void givenRuntimeException_whenCreateReservation_shouldThrowException() {
+        final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString()));
+
+        Mockito.when(accountGateway.accountOfId(from.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from));
+
+        Mockito.when(accountGateway.accountOfId(to.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to));
+
+        Mockito.doThrow(new RuntimeException("Unexpected error"))
+                .when(ledgerRepository).createReservation(any());
+
+        final var command = CreateTransactionCommand.with(
+                from.value().toString(),
+                "pix",
+                "random",
+                BigDecimal.TEN,
+                "idem"
+        );
+
+        final var aException = Assertions.assertThrows(RuntimeException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Unexpected error", aException.getMessage());
     }
 }
