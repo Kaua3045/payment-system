@@ -78,7 +78,7 @@ public class AccountJdbcRepository implements AccountRepository {
         final var aRowsAffected = this.databaseClient.update(aSql, aParams);
 
         if (aRowsAffected != 2) {
-            throw ConflictException.with("Optimistic lock failure on transfer, one of the accounts was updated by another transaction");
+            throw ConflictException.with("Optimistic lock failure on transfer, one of the accounts was updated by another transaction", "version_conflict");
         }
     }
 
@@ -118,7 +118,7 @@ public class AccountJdbcRepository implements AccountRepository {
             );
 
             throw ConflictException.with("Account with identifier %s and version %d does not match, account was updated by another transaction"
-                    .formatted(anAccount.getId().value(), anAccount.getVersion()));
+                    .formatted(anAccount.getId().value(), anAccount.getVersion()), "version_conflict");
         }
     }
 
