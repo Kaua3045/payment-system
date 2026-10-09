@@ -3,7 +3,7 @@ CREATE TABLE ledger_reservations
     id             VARCHAR(26)              NOT NULL PRIMARY KEY,
     transaction_id VARCHAR(26)              NOT NULL,
     account_id     VARCHAR(26)              NOT NULL,
-    amount         NUMERIC(19, 4)           NOT NULL,
+    amount         NUMERIC(19, 2)           NOT NULL,
     status         VARCHAR(20)              NOT NULL, -- PENDING, CONFIRMED, CANCELLED
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at     TIMESTAMP WITH TIME ZONE NOT NULL
@@ -14,7 +14,7 @@ CREATE TABLE ledger_entries
     id             VARCHAR(26)              NOT NULL PRIMARY KEY,
     account_id     VARCHAR(26)              NOT NULL,
     transaction_id VARCHAR(26)              NOT NULL,
-    amount         NUMERIC(19, 4)           NOT NULL,
+    amount         NUMERIC(19, 2)           NOT NULL,
     type           VARCHAR(10)              NOT NULL, -- DEBIT, CREDIT
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL
 );
@@ -23,8 +23,8 @@ CREATE TABLE ledger_snapshots
 (
     account_id       VARCHAR(26)              NOT NULL PRIMARY KEY,
     last_ledger_id   VARCHAR(26)              NOT NULL,
-    balance          NUMERIC(19, 4)           NOT NULL,
-    reserved_balance NUMERIC(19, 4)           NOT NULL DEFAULT 0,
+    balance          NUMERIC(19, 2)           NOT NULL,
+    reserved_balance NUMERIC(19, 2)           NOT NULL DEFAULT 0,
     updated_at       TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
