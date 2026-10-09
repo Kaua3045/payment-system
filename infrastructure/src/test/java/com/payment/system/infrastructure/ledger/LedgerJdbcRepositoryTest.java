@@ -10,11 +10,11 @@ import com.payment.system.domain.ledger.ReservationStatus;
 import com.payment.system.domain.transactions.TransactionId;
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
+import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -32,7 +32,7 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
         final var aLedgerEntry = LedgerEntry.newCredit(
                 new AccountId(IdentifierUtils.generateNewMonotonicULID()),
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
-                new BigDecimal(1000)
+                Money.of(new BigDecimal(1000))
         );
 
         this.ledgerRepository().save(aLedgerEntry);
@@ -49,13 +49,13 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
         final var aLedgerEntry1 = LedgerEntry.newCredit(
                 aAccount.getId(),
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
-                new BigDecimal(1000)
+                Money.of(new BigDecimal(1000))
         );
 
         final var aLedgerEntry2 = LedgerEntry.newDebit(
                 aAccount.getId(),
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
-                new BigDecimal(500)
+                Money.of(new BigDecimal(500))
         );
 
         this.ledgerRepository().saveAll(List.of(
@@ -75,13 +75,13 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
         final var aLedgerEntry1 = LedgerEntry.newCredit(
                 aAccount.getId(),
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
-                new BigDecimal(1000)
+                Money.of(new BigDecimal(1000))
         );
 
         final var aLedgerEntry2 = LedgerEntry.newDebit(
                 aAccount.getId(),
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
-                new BigDecimal(500)
+                Money.of(new BigDecimal(500))
         );
 
         this.ledgerRepository().saveAll(List.of(
@@ -93,7 +93,7 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
 
         final var balance = this.ledgerRepository().calculateBalance(aAccount.getId());
 
-        Assertions.assertEquals(new BigDecimal(500).setScale(2, RoundingMode.HALF_UP), balance.setScale(2, RoundingMode.HALF_UP));
+        Assertions.assertEquals(Money.of(new BigDecimal(500)).amount(), balance);
     }
 
     @Test
@@ -111,14 +111,14 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
     void givenAnReservation_whenCallsCreateReservation_thenShouldPersistIt() {
         final var aAccount = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
         this.ledgerRepository().save(LedgerEntry.newCredit(aAccount.getId(),
-                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), new BigDecimal(1000)));
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), Money.of(new BigDecimal(1000))));
 
         Assertions.assertEquals(0, countLedgerReservations());
 
         final var aReservation = LedgerReservation.newReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 aAccount.getId(),
-                new BigDecimal(1000),
+                Money.of(new BigDecimal(1000)),
                 InstantUtils.now().plus(1, ChronoUnit.DAYS)
         );
 
@@ -132,7 +132,7 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
         Assertions.assertEquals(0, aSavedReservation.getVersion());
         Assertions.assertEquals(aReservation.getAccountId(), aSavedReservation.getAccountId());
         Assertions.assertEquals(aReservation.getTransactionId(), aSavedReservation.getTransactionId());
-        Assertions.assertEquals(aReservation.getAmount().setScale(2, RoundingMode.HALF_UP), aSavedReservation.getAmount().setScale(2, RoundingMode.HALF_UP));
+        Assertions.assertEquals(aReservation.getAmount().amount(), aSavedReservation.getAmount().amount());
         Assertions.assertEquals(aReservation.getCreatedAt(), aSavedReservation.getCreatedAt());
         Assertions.assertEquals(aReservation.getExpiresAt(), aSavedReservation.getExpiresAt());
     }
@@ -141,14 +141,14 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
     void givenAnInsufficientFundsReservation_whenCallsCreateReservation_thenShouldThrowException() {
         final var aAccount = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
         this.ledgerRepository().save(LedgerEntry.newCredit(aAccount.getId(),
-                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), new BigDecimal(1000)));
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), Money.of(new BigDecimal(1000))));
 
         Assertions.assertEquals(0, countLedgerReservations());
 
         final var aReservation = LedgerReservation.newReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 aAccount.getId(),
-                new BigDecimal(1000),
+                Money.of(new BigDecimal(1000)),
                 InstantUtils.now().plus(1, ChronoUnit.DAYS)
         );
 
@@ -159,7 +159,7 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
         final var aSecondReservation = LedgerReservation.newReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 aReservation.getAccountId(),
-                new BigDecimal(500),
+                Money.of(new BigDecimal(500)),
                 InstantUtils.now().plus(1, ChronoUnit.DAYS)
         );
 
@@ -178,14 +178,14 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
     void givenAnValidTransactionId_whenCallsConfirmReservation_thenShouldConfirmIt() {
         final var aAccount = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
         this.ledgerRepository().save(LedgerEntry.newCredit(aAccount.getId(),
-                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), new BigDecimal(1000)));
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), Money.of(new BigDecimal(1000))));
 
         Assertions.assertEquals(0, countLedgerReservations());
 
         final var aReservation = LedgerReservation.newReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 aAccount.getId(),
-                new BigDecimal(1000),
+                Money.of(new BigDecimal(1000)),
                 InstantUtils.now().plus(1, ChronoUnit.DAYS)
         );
 
@@ -204,14 +204,14 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
     void givenAnValidTransactionId_whenCallsCancelReservation_thenShouldCancelIt() {
         final var aAccount = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
         this.ledgerRepository().save(LedgerEntry.newCredit(aAccount.getId(),
-                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), new BigDecimal(1000)));
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), Money.of(new BigDecimal(1000))));
 
         Assertions.assertEquals(0, countLedgerReservations());
 
         final var aReservation = LedgerReservation.newReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 aAccount.getId(),
-                new BigDecimal(1000),
+                Money.of(new BigDecimal(1000)),
                 InstantUtils.now().plus(1, ChronoUnit.DAYS)
         );
 
@@ -230,14 +230,14 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
     void givenAnValidTransactionId_whenCallsFindReservationByTransactionId_thenShouldReturnIt() {
         final var aAccount = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
         this.ledgerRepository().save(LedgerEntry.newCredit(aAccount.getId(),
-                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), new BigDecimal(1000)));
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()), Money.of(new BigDecimal(1000))));
 
         Assertions.assertEquals(0, countLedgerReservations());
 
         final var aReservation = LedgerReservation.newReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 aAccount.getId(),
-                new BigDecimal(1000),
+                Money.of(new BigDecimal(1000)),
                 InstantUtils.now().plus(1, ChronoUnit.DAYS)
         );
 
@@ -250,7 +250,7 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
         Assertions.assertEquals(aReservation.getId(), aFoundReservation.getId());
         Assertions.assertEquals(aReservation.getAccountId(), aFoundReservation.getAccountId());
         Assertions.assertEquals(aReservation.getTransactionId(), aFoundReservation.getTransactionId());
-        Assertions.assertEquals(aReservation.getAmount().setScale(2, RoundingMode.HALF_UP), aFoundReservation.getAmount().setScale(2, RoundingMode.HALF_UP));
+        Assertions.assertEquals(aReservation.getAmount().amount(), aFoundReservation.getAmount().amount());
         Assertions.assertEquals(aReservation.getCreatedAt(), aFoundReservation.getCreatedAt());
         Assertions.assertEquals(aReservation.getExpiresAt(), aFoundReservation.getExpiresAt());
     }
