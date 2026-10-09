@@ -1,4 +1,6 @@
-package com.payment.system.domain.exceptions;
+package com.payment.system.application.exceptions;
+
+import com.payment.system.domain.exceptions.DomainException;
 
 import java.util.ArrayList;
 

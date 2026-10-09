@@ -8,13 +8,14 @@ import java.util.function.Supplier;
 public class NotFoundException extends NoStackTraceException {
 
     public static final String ERROR_MESSAGE = "%s with %s %s was not found";
+    private static final String NOT_FOUND_ERROR_CODE = "resource_not_found";
 
-    protected NotFoundException(final String aMessage) {
-        super(aMessage);
+    protected NotFoundException(final String aMessage, String errorCode) {
+        super(aMessage, errorCode);
     }
 
     public static NotFoundException with(final String aMessage) {
-        return new NotFoundException(aMessage);
+        return new NotFoundException(aMessage, NOT_FOUND_ERROR_CODE);
     }
 
     public static Supplier<NotFoundException> with(
@@ -28,7 +29,7 @@ public class NotFoundException extends NoStackTraceException {
                 aIdentifierValue
         );
 
-        return () -> new NotFoundException(aError);
+        return () -> new NotFoundException(aError, NOT_FOUND_ERROR_CODE);
     }
 
     public static Supplier<NotFoundException> with(
