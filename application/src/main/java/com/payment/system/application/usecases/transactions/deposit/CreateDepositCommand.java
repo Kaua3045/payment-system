@@ -1,12 +1,14 @@
 package com.payment.system.application.usecases.transactions.deposit;
 
+import com.payment.system.domain.valueobjects.Money;
+
 import java.math.BigDecimal;
 
 public record CreateDepositCommand(
         String pixKey,
         String pixKeyType,
         String source,
-        BigDecimal amount,
+        Money amount,
         String idempotencyKey
 ) {
 
@@ -21,7 +23,7 @@ public record CreateDepositCommand(
                 aPixKey,
                 aPixKeyType,
                 aSource,
-                aAmount,
+                Money.of(aAmount),
                 aIdempotencyKey
         );
     }

@@ -2,11 +2,18 @@ package com.payment.system.domain.exceptions;
 
 public class NoStackTraceException extends RuntimeException {
 
-    public NoStackTraceException(final String message) {
-        this(message, null);
+    private final String errorCode;
+
+    public NoStackTraceException(final String message, final String errorCode) {
+        this(message, null, errorCode);
     }
 
-    public NoStackTraceException(final String message, final Throwable cause) {
+    public NoStackTraceException(final String message, final Throwable cause, final String errorCode) {
         super(message, cause, true, false);
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
     }
 }

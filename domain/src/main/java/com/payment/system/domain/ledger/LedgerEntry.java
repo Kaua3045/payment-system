@@ -3,12 +3,11 @@ package com.payment.system.domain.ledger;
 import com.payment.system.domain.AggregateRoot;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.transactions.TransactionId;
-
 import com.payment.system.domain.utils.IdentifierUtils;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.validation.ValidationHandler;
+import com.payment.system.domain.valueobjects.Money;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
 // This aggregate contains the ledger entries for an account.
@@ -18,7 +17,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
 
     private AccountId accountId;
     private TransactionId transactionId;
-    private BigDecimal amount;
+    private Money amount;
     private LedgerType type;
     private Instant createdAt;
 
@@ -27,7 +26,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
             final long version,
             final AccountId accountId,
             final TransactionId transactionId,
-            final BigDecimal amount,
+            final Money amount,
             final LedgerType type,
             final Instant createdAt
     ) {
@@ -46,7 +45,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
     public static LedgerEntry newDebit(
             final AccountId accountId,
             final TransactionId transactionId,
-            final BigDecimal amount
+            final Money amount
     ) {
         return new LedgerEntry(
                 new LedgerEntryId(IdentifierUtils.generateNewMonotonicULID()),
@@ -62,7 +61,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
     public static LedgerEntry newCredit(
             final AccountId accountId,
             final TransactionId transactionId,
-            final BigDecimal amount
+            final Money amount
     ) {
         return new LedgerEntry(
                 new LedgerEntryId(IdentifierUtils.generateNewMonotonicULID()),
@@ -83,7 +82,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
         return transactionId;
     }
 
-    public BigDecimal getAmount() {
+    public Money getAmount() {
         return amount;
     }
 
@@ -105,7 +104,7 @@ public class LedgerEntry extends AggregateRoot<LedgerEntryId> {
         this.transactionId = transactionId;
     }
 
-    private void setAmount(final BigDecimal amount) {
+    private void setAmount(final Money amount) {
         this.assertArgumentNotNull(amount, "amount", "should not be null");
         this.amount = amount;
     }

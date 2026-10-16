@@ -31,4 +31,34 @@ class InternalErrorExceptionTest extends UnitTest {
         Assertions.assertEquals(message, internalErrorException.getMessage());
         Assertions.assertEquals(cause, internalErrorException.getCause());
     }
+
+    @Test
+    void givenAMessageAndACauseAndAnErrorCode_whenCallInternalErrorExceptionWith_ThenReturnInternalErrorException() {
+        // given
+        final var message = "Internal Error";
+        final var cause = new RuntimeException("Cause");
+        final var errorCode = "internal_error";
+
+        // when
+        final var internalErrorException = InternalErrorException.with(message, cause, errorCode);
+
+        // then
+        Assertions.assertEquals(message, internalErrorException.getMessage());
+        Assertions.assertEquals(cause, internalErrorException.getCause());
+        Assertions.assertEquals(errorCode, internalErrorException.getErrorCode());
+    }
+
+    @Test
+    void givenAMessageAndAnErrorCode_whenCallInternalErrorExceptionWith_ThenReturnInternalErrorException() {
+        // given
+        final var message = "Internal Error";
+        final var errorCode = "internal_error";
+
+        // when
+        final var internalErrorException = InternalErrorException.with(message, errorCode);
+
+        // then
+        Assertions.assertEquals(message, internalErrorException.getMessage());
+        Assertions.assertEquals(errorCode, internalErrorException.getErrorCode());
+    }
 }

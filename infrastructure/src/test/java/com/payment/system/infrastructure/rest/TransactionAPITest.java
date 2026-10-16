@@ -117,7 +117,7 @@ class TransactionAPITest {
 
         Assertions.assertEquals(aFromAccountId, aCommandCaptured.fromAccountId());
         Assertions.assertEquals(aPixKey, aCommandCaptured.pixKey());
-        Assertions.assertEquals(aAmount, aCommandCaptured.amount());
+        Assertions.assertEquals(aAmount, aCommandCaptured.amount().amount());
         Assertions.assertEquals(aIdempotencyKey, aCommandCaptured.idempotencyKey());
     }
 
@@ -210,7 +210,7 @@ class TransactionAPITest {
 
         Assertions.assertEquals(aPixKeyType, aCommandCaptured.pixKeyType());
         Assertions.assertEquals(aPixKey, aCommandCaptured.pixKey());
-        Assertions.assertEquals(aAmount, aCommandCaptured.amount());
+        Assertions.assertEquals(aAmount, aCommandCaptured.amount().amount());
         Assertions.assertEquals(aSource, aCommandCaptured.source());
         Assertions.assertEquals(aIdempotencyKey, aCommandCaptured.idempotencyKey());
     }

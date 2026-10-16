@@ -9,6 +9,7 @@ import com.payment.system.domain.ledger.LedgerReservation;
 import com.payment.system.domain.ledger.LedgerReservationId;
 import com.payment.system.domain.ledger.ReservationStatus;
 import com.payment.system.domain.transactions.TransactionId;
+import com.payment.system.domain.valueobjects.Money;
 import com.payment.system.infrastructure.jdbc.DatabaseClient;
 import com.payment.system.infrastructure.jdbc.JdbcUtils;
 import com.payment.system.infrastructure.jdbc.RowMap;
@@ -93,7 +94,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
                 sql,
                 Map.of(
                         "accountId", reservation.getAccountId().value().toString(),
-                        "amount", reservation.getAmount()
+                        "amount", reservation.getAmount().amount()
                 )
         );
 
@@ -304,7 +305,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
                 sql,
                 Map.of(
                         "accountId", entry.getAccountId().value().toString(),
-                        "amount", entry.getAmount(),
+                        "amount", entry.getAmount().amount(),
                         "ledgerId", entry.getId().value().toString()
                 )
         );
@@ -316,7 +317,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
                 0L, // Versão não persistida no banco por enquanto
                 new TransactionId(Ulid.from(rs.getString("transaction_id"))),
                 new AccountId(Ulid.from(rs.getString("account_id"))),
-                rs.getBigDecimal("amount"),
+                Money.of(rs.getBigDecimal("amount")),
                 JdbcUtils.getInstant(rs, "created_at"),
                 JdbcUtils.getInstant(rs, "expires_at"),
                 ReservationStatus.valueOf(rs.getString("status"))
@@ -328,7 +329,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
         params.put("id", entry.getId().value().toString());
         params.put("accountId", entry.getAccountId().value().toString());
         params.put("transactionId", entry.getTransactionId().value().toString());
-        params.put("amount", entry.getAmount());
+        params.put("amount", entry.getAmount().amount());
         params.put("type", entry.getType().name());
         params.put("createdAt", OffsetDateTime.ofInstant(entry.getCreatedAt(), ZoneOffset.UTC));
         return params;
@@ -339,7 +340,7 @@ public class LedgerJdbcRepository implements LedgerRepository {
         params.put("id", reservation.getId().value().toString());
         params.put("transactionId", reservation.getTransactionId().value().toString());
         params.put("accountId", reservation.getAccountId().value().toString());
-        params.put("amount", reservation.getAmount());
+        params.put("amount", reservation.getAmount().amount());
         params.put("status", reservation.getStatus().name());
         params.put("createdAt", OffsetDateTime.ofInstant(reservation.getCreatedAt(), ZoneOffset.UTC));
         params.put("expiresAt", OffsetDateTime.ofInstant(reservation.getExpiresAt(), ZoneOffset.UTC));

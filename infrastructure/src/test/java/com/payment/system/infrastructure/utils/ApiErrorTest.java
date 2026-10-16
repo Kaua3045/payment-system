@@ -27,12 +27,14 @@ class ApiErrorTest extends UnitTest {
     @Test
     void givenAValidMessage_whenCallFrom_shouldReturnMessageAndEmptyErrorList() {
         final var aMessage = "Internal Server Error";
+        final var aErrorCode = "INTERNAL_SERVER_ERROR";
         final var aNow = InstantUtils.now();
 
-        final var aResult = ApiError.from(aMessage, aNow);
+        final var aResult = ApiError.from(aMessage, aErrorCode, aNow);
 
         Assertions.assertEquals(aMessage, aResult.message());
         Assertions.assertEquals(0, aResult.errors().size());
+        Assertions.assertEquals(aErrorCode, aResult.errorCode());
         Assertions.assertEquals(aNow, aResult.timestamp());
     }
 }

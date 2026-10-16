@@ -244,7 +244,7 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
                     account.getId(),
                     account.getId(),
                     pixKey.getId(),
-                    new Money(balance),
+                    Money.of(balance),
                     TransactionType.CREDIT,
                     DepositSource.ATM,
                     IdentifierUtils.generateNewId()
@@ -258,7 +258,7 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
                     LedgerEntry.newCredit(
                             account.getId(),
                             deposit.getId(),
-                            balance
+                            Money.of(balance)
                     )
             );
         });

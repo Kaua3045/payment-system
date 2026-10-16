@@ -7,7 +7,7 @@ import com.payment.system.domain.validation.Error;
 public class ValidationException extends DomainException {
 
     private ValidationException(final List<Error> aErrors) {
-        super("ValidationException", aErrors);
+        super("ValidationException", aErrors, "validation_failed");
     }
 
     public static ValidationException with(final List<Error> aErrors) {
