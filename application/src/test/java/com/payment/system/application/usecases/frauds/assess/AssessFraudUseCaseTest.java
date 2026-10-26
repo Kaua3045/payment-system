@@ -5,8 +5,6 @@ import com.payment.system.application.repositories.StatsRepository;
 import com.payment.system.application.usecases.frauds.pipeline.FraudCase;
 import com.payment.system.application.usecases.frauds.pipeline.FraudPipeline;
 import com.payment.system.application.usecases.frauds.pipeline.FraudStep;
-import com.payment.system.application.wrapper.Metrics;
-import com.payment.system.application.wrapper.TracerWrapper;
 import com.payment.system.domain.frauds.Assessment;
 import com.payment.system.domain.frauds.Attempt;
 import com.payment.system.domain.frauds.Channel;
@@ -30,12 +28,6 @@ class AssessFraudUseCaseTest extends UseCaseTest {
 
     @Mock
     StatsRepository statsRepository;
-
-    @Mock
-    private Metrics metrics;
-
-    @Mock
-    private TracerWrapper tracerWrapper;
 
     private DefaultAssessFraudUseCase useCase;
 
