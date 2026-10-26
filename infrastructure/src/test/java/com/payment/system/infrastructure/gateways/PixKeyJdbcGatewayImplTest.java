@@ -43,6 +43,7 @@ class PixKeyJdbcGatewayImplTest {
         Assertions.assertTrue(aPixKeyResponse.active());
         Assertions.assertEquals(aPixKey.getId(), aPixKeyResponse.pixKeyId());
         Assertions.assertEquals(aPixKey.getAccountId().value().toString(), aPixKeyResponse.accountId());
+        Assertions.assertEquals(aPixKey.getCreatedAt(), aPixKeyResponse.pixKeyCreatedAt());
     }
 
     @Test
@@ -86,6 +87,21 @@ class PixKeyJdbcGatewayImplTest {
         final var aException = Assertions.assertThrows(
                 NotFoundException.class,
                 () -> this.pixKeyGateway.pixKeyOfActiveByValue("EMAIL", aPixKeyValue)
+        );
+
+        Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
+        Assertions.assertEquals("resource_not_found", aException.getErrorCode());
+    }
+
+    @Test
+    void givenANonExistsType_whenPixKeyOfActiveByValue_shouldThrowNotFoundException() {
+        final var aPixKeyValue = "NON-exists@gmail.com";
+
+        final var expectedErrorMessage = "PixKeyType unexpected not found";
+
+        final var aException = Assertions.assertThrows(
+                NotFoundException.class,
+                () -> this.pixKeyGateway.pixKeyOfActiveByValue("unexpected", aPixKeyValue)
         );
 
         Assertions.assertEquals(expectedErrorMessage, aException.getMessage());
