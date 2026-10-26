@@ -10,7 +10,7 @@ class FraudDenyExceptionTest extends UnitTest {
     void givenAnMessage_whenCallsNewFraudDenyException_thenShouldBeOK() {
         final var aMessage = "Transaction rejected by fraud analysis";
 
-        final var aException = new FraudDenyException(aMessage);
+        final var aException = new FraudDenyException();
 
         Assertions.assertEquals(aMessage, aException.getMessage());
         Assertions.assertEquals("FRAUD_DENY", aException.getErrorCode());
