@@ -1,38 +1,48 @@
-# Modelo de EXEMPLO para desenvolvimento e testes. Feito à mão (não foi treinado): cada árvore testa UMA ideia,
-# e os valores das folhas foram escolhidos para os cenários dar resultados fáceis de prever.
-# Índices: 0 log_amount, 1 amount_ratio_log, 2 count_1m_log, 3 count_1h_log, 4 count_24h_log, 5 distinct_payees_log,
-#          6 new_payee, 7 new_device, 8 night, 9 counterparty_new, 10 instrument_recent, 11 country_changed, 12 speed_scaled
+# Modelo de EXEMPLO para desenvolvimento e testes.
+# Índices:
+# 0 log_amount
+# 1 amount_ratio_log
+# 2 count_1m_log
+# 3 count_1h_log
+# 4 count_24h_log
+# 5 distinct_payees_log
+# 6 new_payee
+# 7 night
+# 8 counterparty_new
+# 9 instrument_recent
+# 10 country_changed
+# 11 speed_scaled
+
 TREEMODEL 1
-FEATURES log_amount,amount_ratio_log,count_1m_log,count_1h_log,count_24h_log,distinct_payees_log,new_payee,new_device,night,counterparty_new,instrument_recent,country_changed,speed_scaled
-# BASE -3.0  =>  sem nenhum sinal, o risco parte de 4,7% (sigmoid(-3.0))
+FEATURES log_amount,amount_ratio_log,count_1m_log,count_1h_log,count_24h_log,distinct_payees_log,new_payee,night,counterparty_new,instrument_recent,country_changed,speed_scaled
+
 BASE -3.0
 TREES 4
 
-# árvore 0: o destinatário é novo?
+# Árvore 0: o destinatário é novo?
 TREE 3
 0 S 6 0.5 1 2
 1 L -0.3
 2 L 1.2
 
-# árvore 1: o aparelho é novo? (se for, o valor é alto, acima de ~R$400?)
-TREE 5
-0 S 7 0.5 1 2
-1 L -0.1
-2 S 0 6.0 3 4
-3 L 0.8
-4 L 2.0
-
-# árvore 2: o valor está muito acima do normal DESTA conta?
+# Árvore 1: o valor está muito acima do normal desta conta?
 TREE 3
 0 S 1 1.3 1 2
 1 L -0.1
 2 L 1.4
 
-# árvore 3: a conta de destino é recente? (se não for, houve deslocamento rápido demais?)
+# Árvore 2: instrumento recente ou velocidade suspeita?
 TREE 5
 0 S 9 0.5 1 2
-1 S 12 0.6 3 4
+1 S 11 0.6 3 4
 2 L 1.0
 3 L 0.0
 4 L 1.5
+
+# Árvore 3: país diferente do habitual?
+TREE 3
+0 S 10 0.5 1 2
+1 L 0.0
+2 L 0.8
+
 END
