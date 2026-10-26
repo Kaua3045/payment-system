@@ -12,17 +12,16 @@ public final class FeatureVector {
     public static final int COUNT_24H_LOG = 4;
     public static final int DISTINCT_PAYEES_LOG = 5;
     public static final int NEW_PAYEE = 6;
-    public static final int NEW_DEVICE = 7;
-    public static final int NIGHT = 8;
-    public static final int COUNTERPARTY_NEW = 9; // Destination is NEW
-    public static final int INSTRUMENT_RECENT = 10; // Pix, card, recently created
-    public static final int COUNTRY_CHANGED = 11;
-    public static final int SPEED_SCALED = 12;
+    public static final int NIGHT = 7;
+    public static final int COUNTERPARTY_NEW = 8; // Destination is NEW
+    public static final int INSTRUMENT_RECENT = 9; // Pix, card, recently created
+    public static final int COUNTRY_CHANGED = 10;
+    public static final int SPEED_SCALED = 11;
 
     public static final List<String> NAMES = List.of(
             "log_amount", "amount_ratio_log",
             "count_1m_log", "count_1h_log", "count_24h_log", "distinct_payees_log",
-            "new_payee", "new_device", "night",
+            "new_payee", "night",
             "counterparty_new", "instrument_recent",
             "country_changed", "speed_scaled");
 
