@@ -5,6 +5,8 @@ import com.payment.system.application.repositories.StatsRepository;
 import com.payment.system.application.usecases.frauds.pipeline.FraudCase;
 import com.payment.system.application.usecases.frauds.pipeline.FraudPipeline;
 import com.payment.system.application.usecases.frauds.pipeline.FraudStep;
+import com.payment.system.application.wrapper.Metrics;
+import com.payment.system.application.wrapper.TracerWrapper;
 import com.payment.system.domain.frauds.Assessment;
 import com.payment.system.domain.frauds.Attempt;
 import com.payment.system.domain.frauds.Channel;
@@ -29,6 +31,12 @@ class AssessFraudUseCaseTest extends UseCaseTest {
     @Mock
     StatsRepository statsRepository;
 
+    @Mock
+    private Metrics metrics;
+
+    @Mock
+    private TracerWrapper tracerWrapper;
+
     private DefaultAssessFraudUseCase useCase;
 
     @BeforeEach
@@ -37,7 +45,9 @@ class AssessFraudUseCaseTest extends UseCaseTest {
         useCase = new DefaultAssessFraudUseCase(
                 applicationLogger,
                 Map.of(Channel.PIX, pipeline),
-                statsRepository
+                statsRepository,
+                metrics,
+                tracerWrapper
         );
     }
 
@@ -71,7 +81,9 @@ class AssessFraudUseCaseTest extends UseCaseTest {
                 new DefaultAssessFraudUseCase(
                         applicationLogger,
                         Map.of(Channel.PIX, pipeline),
-                        statsRepository
+                        statsRepository,
+                        metrics,
+                        tracerWrapper
                 );
 
         Assessment result = useCase.execute(attempt);
@@ -90,7 +102,9 @@ class AssessFraudUseCaseTest extends UseCaseTest {
                 new DefaultAssessFraudUseCase(
                         applicationLogger,
                         Map.of(Channel.CARD, pipeline),
-                        statsRepository
+                        statsRepository,
+                        metrics,
+                        tracerWrapper
                 );
 
         Assessment result = useCase.execute(attempt);
@@ -132,7 +146,9 @@ class AssessFraudUseCaseTest extends UseCaseTest {
                 new DefaultAssessFraudUseCase(
                         applicationLogger,
                         Map.of(Channel.PIX, pipeline),
-                        statsRepository
+                        statsRepository,
+                        metrics,
+                        tracerWrapper
                 );
 
         Assessment result = useCase.execute(attempt);
