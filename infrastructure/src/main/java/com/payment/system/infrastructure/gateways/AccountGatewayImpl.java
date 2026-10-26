@@ -22,7 +22,8 @@ public class AccountGatewayImpl implements AccountGateway {
 
         return new AccountResponse(
                 aAccount.getStatus(),
-                aAccount.getId()
+                aAccount.getId(),
+                aAccount.getCreatedAt()
         );
     }
 }
