@@ -392,6 +392,39 @@ class PixKeyJdbcRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
+    void givenPixKeys_whenCallsListAllWithStatusFilter_thenShouldReturnOnlyThatType() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.EMAIL, "a@mail.com"),
+                        accountId
+                )
+        );
+
+        this.pixKeyRepository().save(
+                PixKey.newPixKey(
+                        new PixKeyValueFactory().create(PixKeyType.RANDOM, "abc"),
+                        accountId
+                )
+        );
+
+        final var query = SearchQuery.newSearchQuery(
+                0,
+                10,
+                null,
+                "status",
+                "desc",
+                Map.of("status", "ACTIVE")
+        );
+
+        final var result = this.pixKeyRepository().listAll(query);
+
+        Assertions.assertEquals(2, result.items().size());
+        Assertions.assertEquals(PixKeyType.EMAIL, result.items().get(0).getKey().type());
+    }
+
+    @Test
     void givenPixKeysSavedViaRepository_whenFilterByPeriod_thenShouldReturnOnlyInsidePeriod() {
         final var repository = this.pixKeyRepository();
 
