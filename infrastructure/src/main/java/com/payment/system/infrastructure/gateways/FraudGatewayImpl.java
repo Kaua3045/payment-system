@@ -23,7 +23,7 @@ public class FraudGatewayImpl implements FraudGateway {
     public Assessment assess(final Attempt attempt) {
         log.info("Calling fraud service {}", attempt);
         final var assessment = this.fraudModule.getUseCase().execute(attempt);
-        log.info("Fraud result with verdict {} score {} and reasons {}", assessment.verdict().name(), assessment.score(), assessment.reasons());
+        log.info("Fraud result with verdict {} score {} and reasons {}", assessment.verdict(), assessment.score(), assessment.reasons());
         return assessment;
     }
 }
