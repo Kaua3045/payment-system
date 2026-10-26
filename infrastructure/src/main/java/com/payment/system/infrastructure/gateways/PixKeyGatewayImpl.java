@@ -36,7 +36,8 @@ public class PixKeyGatewayImpl implements PixKeyGateway {
         return new PixKeyActiveResponse(
                 true,
                 aPixKey.getId(),
-                aPixKey.getAccountId().value().toString()
+                aPixKey.getAccountId().value().toString(),
+                aPixKey.getCreatedAt()
         );
     }
 }
