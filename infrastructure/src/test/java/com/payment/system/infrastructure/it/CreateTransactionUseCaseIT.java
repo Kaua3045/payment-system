@@ -10,6 +10,7 @@ import com.payment.system.application.usecases.transactions.create.CreateTransac
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.exceptions.ConflictException;
 import com.payment.system.domain.exceptions.InsufficientFundsException;
+import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.ledger.LedgerEntry;
 import com.payment.system.domain.pixkeys.PixKey;
@@ -28,6 +29,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -37,11 +40,23 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
     private static final BigDecimal AMOUNT = BigDecimal.TEN;
     private static final String CONCURRENT_IDEMPOTENCY_KEY = "idempotency-concurrently-test";
 
-    private final LongAdder insufficientFundsFailures = new LongAdder();
-    private final LongAdder conflictsFailures = new LongAdder();
-    private final LongAdder unexpectedFailures = new LongAdder();
-    private final LongAdder success = new LongAdder();
-    private final LongAdder executed = new LongAdder();
+    /**
+     * Todo resultado possível de uma tentativa de transferência.
+     * Cada tentativa cai em EXATAMENTE um deles.
+     */
+    private enum Outcome {
+        SUCCESS,
+        INSUFFICIENT_FUNDS,
+        CONFLICT,
+        ANTI_FRAUD_DENIED,
+        ANTI_FRAUD_MANUAL_REVIEW,
+        UNEXPECTED
+    }
+
+    private final Map<Outcome, LongAdder> outcomes = new EnumMap<>(Outcome.class);
+
+    // "Outcome: motivo" -> quantidade (para saber POR QUE negou / foi para revisão)
+    private final Map<String, LongAdder> reasons = new ConcurrentHashMap<>();
 
     @Autowired
     private CreateTransactionUseCase useCase;
@@ -66,12 +81,15 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void resetCounters() {
-        insufficientFundsFailures.reset();
-        conflictsFailures.reset();
-        unexpectedFailures.reset();
-        executed.reset();
-        success.reset();
+        for (Outcome outcome : Outcome.values()) {
+            outcomes.put(outcome, new LongAdder());
+        }
+        reasons.clear();
     }
+
+    // ------------------------------------------------------------------
+    // TESTES
+    // ------------------------------------------------------------------
 
     @Test
     void shouldAllowOnlyOneTransferWithExactBalanceWithSameIdempotencyKey_underHighConcurrency()
@@ -88,24 +106,22 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
 
         PixKey pixKey = createPixKey(to);
 
-        runConcurrently(() ->
-                executeTransactionIgnoringConcurrencyFailures(
-                        from,
-                        pixKey,
-                        false
-                )
+        runConcurrently(THREADS, () ->
+                executeTransfer(from, pixKey, AMOUNT, CONCURRENT_IDEMPOTENCY_KEY)
         );
 
-        assertOnlyOneTransferPersisted(from);
-        assertOnlyOneTransferWithIdempotencyKeyPersisted(from);
+        assertNoUnexpectedFailures(THREADS);
 
-        assertBalancesAfterExactTransfer(
-                from,
-                to,
-                AMOUNT
+        long persisted = countTransfers(from);
+        assertExpectedCount("transfers persisted", 1, persisted);
+
+        assertExpectedCount(
+                "transfers persisted with the same idempotency key",
+                1,
+                countTransfersWithIdempotencyKey(from, CONCURRENT_IDEMPOTENCY_KEY)
         );
 
-        assertOnlyConcurrencyFailures();
+        assertBalances(from, to, AMOUNT, AMOUNT, persisted);
     }
 
     @Test
@@ -123,29 +139,17 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
 
         PixKey pixKey = createPixKey(to);
 
-        runConcurrently(() ->
-                executeTransactionIgnoringConcurrencyFailures(
-                        from,
-                        pixKey,
-                        true
-                )
+        runConcurrently(THREADS, () ->
+                executeTransfer(from, pixKey, AMOUNT, IdentifierUtils.generateNewId())
         );
 
-        assertOnlyOneTransferPersisted(from);
+        assertNoUnexpectedFailures(THREADS);
 
-        assertBalancesAfterExactTransfer(
-                from,
-                to,
-                AMOUNT
-        );
+        long persisted = countTransfers(from);
+        assertExpectedCount("transfers persisted", 1, persisted);
+        assertExpectedCount("successful transfers", 1, count(Outcome.SUCCESS));
 
-        Assertions.assertEquals(
-                1,
-                success.sum(),
-                "Only one transfer should succeed"
-        );
-
-        assertOnlyConcurrencyFailures();
+        assertBalances(from, to, AMOUNT, AMOUNT, persisted);
     }
 
     @Test
@@ -155,12 +159,15 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
         // Conta começa com 100.
         // 10 threads tentam transferir 20 simultaneamente.
         //
-        // Resultado esperado:
+        // Resultado esperado (sem rejeições do anti-fraude):
         // - exatamente 5 transferências sucedem;
-        // - exatamente 5 transferências são rejeitadas;
-        // - saldo de origem termina em 0;
-        // - saldo de destino termina em 100;
+        // - as outras 5 são rejeitadas por saldo insuficiente / conflito;
+        // - saldo de origem termina em 0 e o de destino em 100;
         // - saldo nunca fica negativo.
+        //
+        // Se o anti-fraude rejeitar alguma (deny / manual review), o teste não
+        // exige mais 5 sucessos, mas exige consistência total entre
+        // transações persistidas e saldos.
 
         BigDecimal initialBalance = new BigDecimal("100.00");
         BigDecimal transferAmount = new BigDecimal("20.00");
@@ -177,53 +184,281 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
 
         PixKey pixKey = createPixKey(to);
 
-        runConcurrently(
-                totalThreads,
-                () -> executeTransfer(
-                        from,
-                        pixKey,
-                        transferAmount
-                )
+        runConcurrently(totalThreads, () ->
+                executeTransfer(from, pixKey, transferAmount, IdentifierUtils.generateNewId())
         );
 
-        BigDecimal finalBalanceFrom =
-                ledgerRepository.calculateBalance(from.getId());
+        assertNoUnexpectedFailures(totalThreads);
 
-        BigDecimal finalBalanceTo =
-                ledgerRepository.calculateBalance(to.getId());
+        BigDecimal finalBalanceFrom = ledgerRepository.calculateBalance(from.getId());
 
         // O saldo nunca pode ser negativo.
         Assertions.assertTrue(
                 finalBalanceFrom.compareTo(BigDecimal.ZERO) >= 0,
-                "Source balance should never be negative"
+                "Source balance should never be negative. " + report()
         );
 
-        // Exatamente 5 transferências de 20 devem ser executadas.
+        long persisted = countTransfers(from);
+
+        assertExpectedCount("successful transfers", 5, count(Outcome.SUCCESS));
+        assertExpectedCount("transfers persisted", 5, persisted);
+
+        assertBalances(from, to, initialBalance, transferAmount, persisted);
+    }
+
+    // ------------------------------------------------------------------
+    // EXECUÇÃO / CLASSIFICAÇÃO DOS RESULTADOS
+    // ------------------------------------------------------------------
+
+    private void executeTransfer(
+            final Account from,
+            final PixKey pixKey,
+            final BigDecimal amount,
+            final String idempotencyKey
+    ) {
+        try {
+            useCase.execute(
+                    CreateTransactionCommand.with(
+                            from.getId().value().toString(),
+                            pixKey.getKey().value(),
+                            pixKey.getKey().type().name(),
+                            amount,
+                            idempotencyKey,
+                            "120.57.189.108"
+                    )
+            );
+
+            record(Outcome.SUCCESS, null);
+
+        } catch (InsufficientFundsException ex) {
+            record(Outcome.INSUFFICIENT_FUNDS, null);
+
+        } catch (ConflictException ex) {
+            record(Outcome.CONFLICT, null);
+
+        } catch (ValidationException ex) {
+            if (containsIgnoreCase(ex.getMessage(), "deny")) {
+                record(Outcome.ANTI_FRAUD_DENIED, String.valueOf(ex.getErrors()));
+            } else {
+                // ValidationException que não seja deny do anti-fraude não é esperada aqui.
+                log("Unexpected ValidationException", String.valueOf(ex.getErrors()));
+                record(Outcome.UNEXPECTED, "ValidationException: " + ex.getErrors());
+            }
+
+        } catch (InternalErrorException ex) {
+            if (containsIgnoreCase(ex.getMessage(), "manual review")) {
+                record(Outcome.ANTI_FRAUD_MANUAL_REVIEW, ex.getMessage());
+            } else {
+                log("Unexpected InternalErrorException", ex.getMessage());
+                record(Outcome.UNEXPECTED, "InternalErrorException: " + ex.getMessage());
+            }
+
+        } catch (Exception ex) {
+            log("Unexpected Exception",
+                    ex.getClass().getSimpleName() + " - " + ex.getMessage());
+            ex.printStackTrace();
+            record(Outcome.UNEXPECTED, ex.getClass().getSimpleName() + ": " + ex.getMessage());
+        }
+    }
+
+    private void record(final Outcome outcome, final String reason) {
+        outcomes.get(outcome).increment();
+
+        if (reason != null) {
+            reasons.computeIfAbsent(outcome + " -> " + reason, k -> new LongAdder())
+                    .increment();
+        }
+    }
+
+    private long count(final Outcome outcome) {
+        return outcomes.get(outcome).sum();
+    }
+
+    private long antiFraudRejections() {
+        return count(Outcome.ANTI_FRAUD_DENIED) + count(Outcome.ANTI_FRAUD_MANUAL_REVIEW);
+    }
+
+    private static boolean containsIgnoreCase(final String text, final String part) {
+        return text != null && text.toLowerCase().contains(part.toLowerCase());
+    }
+
+    private static void log(final String title, final String detail) {
+        System.out.println("[DEBUG_LOG] " + title + ": " + detail);
+    }
+
+    private String report() {
+        StringBuilder sb = new StringBuilder("\n===== OUTCOME REPORT =====\n");
+
+        for (Outcome outcome : Outcome.values()) {
+            sb.append(String.format("%-26s %d%n", outcome, count(outcome)));
+        }
+
+        if (!reasons.isEmpty()) {
+            sb.append("--- reasons ---\n");
+            reasons.forEach((reason, qty) ->
+                    sb.append(String.format("%5d x %s%n", qty.sum(), reason)));
+        }
+
+        sb.append("==========================");
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------------
+    // CONCORRÊNCIA
+    // ------------------------------------------------------------------
+
+    private void runConcurrently(
+            final int threadCount,
+            final Runnable action
+    ) throws InterruptedException {
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CyclicBarrier barrier = new CyclicBarrier(threadCount);
+        CountDownLatch done = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    barrier.await();
+                    action.run();
+
+                } catch (BrokenBarrierException | InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    record(Outcome.UNEXPECTED, "Barrier/Interrupted: " + e.getClass().getSimpleName());
+
+                } catch (Throwable t) {
+                    // Nada escapa silenciosamente do executor.
+                    t.printStackTrace();
+                    record(Outcome.UNEXPECTED, "Escaped: " + t.getClass().getSimpleName());
+
+                } finally {
+                    done.countDown();
+                }
+            });
+        }
+
+        boolean finished = done.await(60, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        System.out.println(report());
+
+        Assertions.assertTrue(finished, "Concurrent execution timed out. " + report());
+    }
+
+    // ------------------------------------------------------------------
+    // ASSERTS
+    // ------------------------------------------------------------------
+
+    /**
+     * Nenhuma exceção inesperada e toda tentativa classificada em algum Outcome.
+     * Deny / manual review do anti-fraude NÃO são "inesperados": ficam
+     * contabilizados separadamente.
+     */
+    private void assertNoUnexpectedFailures(final int expectedAttempts) {
         Assertions.assertEquals(
-                5,
-                success.sum(),
-                "Exactly 5 transfers should succeed"
+                0,
+                count(Outcome.UNEXPECTED),
+                "No unexpected exceptions should occur during concurrency test. " + report()
         );
 
-        // Exatamente 5 transferências devem ter sido persistidas.
-        assertTransferCount(from, 5);
-
-        // Todas as falhas devem ser consequência do controle de concorrência.
-//        assertOnlyConcurrencyFailures();
-
-        // Saldo final esperado.
-        Assertions.assertEquals(
-                initialBalance.setScale(4),
-                finalBalanceTo.setScale(4),
-                "Destination account should receive exactly the transferred amount"
-        );
+        long total = 0;
+        for (Outcome outcome : Outcome.values()) {
+            total += count(outcome);
+        }
 
         Assertions.assertEquals(
-                BigDecimal.ZERO.setScale(4),
-                finalBalanceFrom.setScale(4),
-                "Source account balance should be ZERO"
+                expectedAttempts,
+                total,
+                "Every attempt must end in exactly one known outcome. " + report()
         );
     }
+
+    /**
+     * Sem rejeição do anti-fraude: o valor tem que ser exatamente o esperado.
+     * Com rejeição do anti-fraude: pode ser menor, mas nunca maior.
+     */
+    private void assertExpectedCount(
+            final String what,
+            final long expected,
+            final long actual
+    ) {
+        if (antiFraudRejections() == 0) {
+            Assertions.assertEquals(
+                    expected,
+                    actual,
+                    "Unexpected number of " + what + ". " + report()
+            );
+        } else {
+            Assertions.assertTrue(
+                    actual <= expected,
+                    "Number of " + what + " (" + actual + ") must never exceed " + expected
+                            + ". " + report()
+            );
+        }
+    }
+
+    /**
+     * Saldos coerentes com o que realmente foi persistido:
+     * destino = valor * transferências; origem = saldo inicial - isso.
+     */
+    private void assertBalances(
+            final Account from,
+            final Account to,
+            final BigDecimal initialBalance,
+            final BigDecimal transferAmount,
+            final long persistedTransfers
+    ) {
+        BigDecimal transferred = transferAmount.multiply(BigDecimal.valueOf(persistedTransfers));
+
+        BigDecimal balanceFrom = ledgerRepository.calculateBalance(from.getId());
+        BigDecimal balanceTo = ledgerRepository.calculateBalance(to.getId());
+
+        Assertions.assertEquals(
+                initialBalance.subtract(transferred).setScale(4),
+                balanceFrom.setScale(4),
+                "Source balance must match initial balance minus persisted transfers. " + report()
+        );
+
+        Assertions.assertEquals(
+                transferred.setScale(4),
+                balanceTo.setScale(4),
+                "Destination must receive exactly what was persisted. " + report()
+        );
+    }
+
+    private long countTransfers(final Account from) {
+        Integer count = jdbcTemplate.queryForObject("""
+                        SELECT COUNT(*)
+                        FROM transactions
+                        WHERE from_account_id = ?
+                          AND type = 'TRANSFER'
+                        """,
+                Integer.class,
+                from.getId().value().toString()
+        );
+
+        return count == null ? 0 : count;
+    }
+
+    private long countTransfersWithIdempotencyKey(final Account from, final String key) {
+        Integer count = jdbcTemplate.queryForObject("""
+                        SELECT COUNT(*)
+                        FROM transactions
+                        WHERE from_account_id = ?
+                          AND type = 'TRANSFER'
+                          AND idempotency_key = ?
+                        """,
+                Integer.class,
+                from.getId().value().toString(),
+                key
+        );
+
+        return count == null ? 0 : count;
+    }
+
+    // ------------------------------------------------------------------
+    // FIXTURES
+    // ------------------------------------------------------------------
 
     private Account createAccount(final String owner) {
         return accountRepository.save(
@@ -276,259 +511,6 @@ class CreateTransactionUseCaseIT extends AbstractIntegrationTest {
                                 ),
                         account.getId()
                 )
-        );
-    }
-
-    private void executeTransactionIgnoringConcurrencyFailures(
-            final Account from,
-            final PixKey pixKey,
-            final boolean differentIdempotencyKey
-    ) {
-        try {
-            useCase.execute(
-                    CreateTransactionCommand.with(
-                            from.getId().value().toString(),
-                            pixKey.getKey().value(),
-                            pixKey.getKey().type().name(),
-                            AMOUNT,
-                            differentIdempotencyKey
-                                    ? IdentifierUtils.generateNewId()
-                                    : CONCURRENT_IDEMPOTENCY_KEY
-                    )
-            );
-
-            success.increment();
-
-        } catch (InsufficientFundsException ex) {
-            insufficientFundsFailures.increment();
-
-        } catch (ConflictException ex) {
-            conflictsFailures.increment();
-
-        } catch (ValidationException ex) {
-            System.out.println(
-                    "[DEBUG_LOG] ValidationException: "
-                            + ex.getErrors()
-            );
-
-            /*
-             * ValidationException não é esperada como mecanismo
-             * de rejeição nesse cenário de concorrência.
-             */
-            unexpectedFailures.increment();
-
-        } catch (Exception ex) {
-            System.out.println(
-                    "[DEBUG_LOG] Unexpected Exception: "
-                            + ex.getClass().getSimpleName()
-                            + " - "
-                            + ex.getMessage()
-            );
-
-            ex.printStackTrace();
-
-            unexpectedFailures.increment();
-        }
-    }
-
-    private void executeTransfer(
-            final Account from,
-            final PixKey pixKey,
-            final BigDecimal amount
-    ) {
-        try {
-            useCase.execute(
-                    CreateTransactionCommand.with(
-                            from.getId().value().toString(),
-                            pixKey.getKey().value(),
-                            pixKey.getKey().type().name(),
-                            amount,
-                            IdentifierUtils.generateNewId()
-                    )
-            );
-
-            success.increment();
-
-        } catch (InsufficientFundsException ex) {
-            insufficientFundsFailures.increment();
-
-        } catch (ConflictException ex) {
-            conflictsFailures.increment();
-
-        } catch (ValidationException ex) {
-            System.out.println(
-                    "[DEBUG_LOG] ValidationException: "
-                            + ex.getErrors()
-            );
-
-            unexpectedFailures.increment();
-
-        } catch (Exception ex) {
-            System.out.println(
-                    "[DEBUG_LOG] Unexpected Exception: "
-                            + ex.getClass().getSimpleName()
-                            + " - "
-                            + ex.getMessage()
-            );
-
-            ex.printStackTrace();
-
-            unexpectedFailures.increment();
-
-        } finally {
-            executed.increment();
-        }
-    }
-
-    private void runConcurrently(final Runnable action)
-            throws InterruptedException {
-
-        runConcurrently(
-                THREADS,
-                action
-        );
-    }
-
-    private void runConcurrently(
-            final int threadCount,
-            final Runnable action
-    ) throws InterruptedException {
-
-        ExecutorService executor =
-                Executors.newFixedThreadPool(threadCount);
-
-        CyclicBarrier barrier =
-                new CyclicBarrier(threadCount);
-
-        CountDownLatch done =
-                new CountDownLatch(threadCount);
-
-        for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                try {
-                    barrier.await();
-
-                    action.run();
-
-                    executed.increment();
-
-                } catch (BrokenBarrierException | InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    unexpectedFailures.increment();
-
-                } finally {
-                    done.countDown();
-                }
-            });
-        }
-
-        done.await();
-
-        executor.shutdown();
-    }
-
-    private void assertOnlyOneTransferPersisted(
-            final Account from
-    ) {
-        Integer count = jdbcTemplate.queryForObject("""
-                        SELECT COUNT(*)
-                        FROM transactions
-                        WHERE from_account_id = ?
-                          AND type = 'TRANSFER'
-                        """,
-                Integer.class,
-                from.getId().value().toString()
-        );
-
-        Assertions.assertEquals(
-                1,
-                count,
-                "Under high concurrency, only ONE transfer must be persisted"
-        );
-    }
-
-    private void assertTransferCount(
-            final Account from,
-            final int expected
-    ) {
-        Integer count = jdbcTemplate.queryForObject("""
-                        SELECT COUNT(*)
-                        FROM transactions
-                        WHERE from_account_id = ?
-                          AND type = 'TRANSFER'
-                        """,
-                Integer.class,
-                from.getId().value().toString()
-        );
-
-        Assertions.assertEquals(
-                expected,
-                count,
-                "Unexpected number of persisted transfers"
-        );
-    }
-
-    private void assertOnlyOneTransferWithIdempotencyKeyPersisted(
-            final Account from
-    ) {
-        Integer count = jdbcTemplate.queryForObject("""
-                        SELECT COUNT(*)
-                        FROM transactions
-                        WHERE from_account_id = ?
-                          AND type = 'TRANSFER'
-                          AND idempotency_key = ?
-                        """,
-                Integer.class,
-                from.getId().value().toString(),
-                CONCURRENT_IDEMPOTENCY_KEY
-        );
-
-        Assertions.assertEquals(
-                1,
-                count,
-                "Exactly ONE transfer must be persisted for the same idempotency key"
-        );
-    }
-
-    private void assertOnlyConcurrencyFailures() {
-        long totalConcurrencyFailures =
-                conflictsFailures.sum()
-                        + insufficientFundsFailures.sum();
-
-        Assertions.assertEquals(
-                executed.longValue() - success.longValue(),
-                totalConcurrencyFailures,
-                "All failed requests must be rejected by concurrency control"
-        );
-
-        Assertions.assertEquals(
-                0,
-                unexpectedFailures.sum(),
-                "No unexpected exceptions should occur during concurrency test"
-        );
-    }
-
-    private void assertBalancesAfterExactTransfer(
-            final Account from,
-            final Account to,
-            final BigDecimal amount
-    ) {
-        BigDecimal balanceFrom =
-                ledgerRepository.calculateBalance(from.getId());
-
-        BigDecimal balanceTo =
-                ledgerRepository.calculateBalance(to.getId());
-
-        Assertions.assertEquals(
-                BigDecimal.ZERO.setScale(4),
-                balanceFrom.setScale(4),
-                "Source account balance must be ZERO"
-        );
-
-        Assertions.assertEquals(
-                amount.setScale(4),
-                balanceTo.setScale(4),
-                "Destination account must receive exactly the transferred amount"
         );
     }
 }
