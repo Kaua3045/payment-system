@@ -3,6 +3,7 @@ package com.payment.system.application.usecases.transactions.create;
 import com.payment.system.application.exceptions.AccountIsNotActiveException;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.gateways.AccountGateway;
+import com.payment.system.application.gateways.FraudGateway;
 import com.payment.system.application.gateways.PixKeyGateway;
 import com.payment.system.application.repositories.LedgerRepository;
 import com.payment.system.application.repositories.TransactionRepository;
@@ -12,13 +13,17 @@ import com.payment.system.application.wrapper.TracerWrapper;
 import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.AccountStatus;
 import com.payment.system.domain.exceptions.DomainException;
+import com.payment.system.domain.exceptions.FraudDenyException;
 import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NoStackTraceException;
+import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.ledger.LedgerEntry;
 import com.payment.system.domain.ledger.LedgerReservation;
 import com.payment.system.domain.transactions.DepositSource;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.transactions.TransactionType;
+import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.valueobjects.Money;
 
 import java.time.Instant;
@@ -31,6 +36,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
     private final AccountGateway accountGateway;
     private final PixKeyGateway pixKeyGateway;
+    private final FraudGateway fraudGateway;
 
     private final TransactionRepository transactionRepository;
     private final LedgerRepository ledgerRepository;
@@ -40,24 +46,30 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
     private final Metrics metrics;
     private final TracerWrapper trace;
 
+    private final int reservationExpiresInMinutes;
+
     public DefaultCreateTransactionUseCase(
             final AccountGateway accountGateway,
             final PixKeyGateway pixKeyGateway,
+            final FraudGateway fraudGateway,
             final TransactionRepository transactionRepository,
             final LedgerRepository ledgerRepository,
             final TransactionManager transactionManager,
             final Metrics metrics,
             final ApplicationLogger logger,
-            final TracerWrapper trace
+            final TracerWrapper trace,
+            final int reservationExpiresInMinutes
     ) {
         super(logger);
         this.accountGateway = Objects.requireNonNull(accountGateway);
         this.pixKeyGateway = Objects.requireNonNull(pixKeyGateway);
+        this.fraudGateway = Objects.requireNonNull(fraudGateway);
         this.transactionRepository = Objects.requireNonNull(transactionRepository);
         this.ledgerRepository = Objects.requireNonNull(ledgerRepository);
         this.transactionManager = Objects.requireNonNull(transactionManager);
         this.metrics = Objects.requireNonNull(metrics);
         this.trace = trace;
+        this.reservationExpiresInMinutes = reservationExpiresInMinutes;
     }
 
     @Override
@@ -92,6 +104,29 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 }
 
                 // TODO: [FRAUDE] Verificação síncrona de risco antes da reserva
+                // TODO adicionar a location, ja recebo o ip no input, so falta chamar um gateway pra pegar a location, e ai passar para o assess
+                final var fraudResult = this.fraudGateway.assess(Attempt.pix(
+                        input.idempotencyKey(),
+                        aFromAccount.accountId().value().toString(),
+                        aToAccount.accountId().value().toString(),
+                        input.pixKey(),
+                        aPixKeyResponse.pixKeyCreatedAt(),
+                        input.amount(),
+                        InstantUtils.now(),
+                        null,
+                        aToAccount.createdAt()
+                ));
+
+                if (fraudResult.verdict().equals(Verdict.DENY)) {
+                    // TODO Improve this exception using a custom exception or store transaction with fraud deny and return this
+                    throw new FraudDenyException();
+                }
+
+                if (fraudResult.verdict().equals(Verdict.MANUAL_REVIEW)) {
+                    // In future handle this, but at this moment throw internal error or domain exception with manual review requested
+                    // but at this moment not implemented
+                    throw InternalErrorException.with("Manual review not implemented");
+                }
 
                 final var aTransaction = Transaction.newTransaction(
                         aFromAccount.accountId(),
@@ -107,7 +142,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         aTransaction.getId(),
                         aFromAccount.accountId(),
                         input.amount(),
-                        Instant.now().plus(10, ChronoUnit.MINUTES)
+                        Instant.now().plus(reservationExpiresInMinutes, ChronoUnit.MINUTES)
                 );
 
                 final var aOutput = this.transactionManager.execute(() -> {
