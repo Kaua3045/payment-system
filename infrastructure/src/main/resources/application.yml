@@ -17,6 +17,10 @@ fraud:
   travel-boost: 3.0
   fail-open-below: 200.00
 
+ledger:
+  reservation:
+    expires-in-minutes: 10
+
 logging:
   level:
     ROOT: WARN
