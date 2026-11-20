@@ -44,6 +44,7 @@ public final class DefaultAssessFraudUseCase extends AssessFraudUseCase {
                 return new Assessment(Verdict.MANUAL_REVIEW, Double.NaN, List.of("UNSUPPORTED_CHANNEL"));
             }
 
+            // TODO precisa adicionar o step de location, que vai pegar a location do ip e adicionar no attempt, e ai o enrich step vai pegar a location e adicionar no stats, e ai o feature extractor vai pegar a location e adicionar na feature vector
             final var fraudCase = pipeline.run(attempt);
             final var result = fraudCase.toAssessment();
             recordQuietly(attempt, result); // always, even when a strict rule brought things to an early end
