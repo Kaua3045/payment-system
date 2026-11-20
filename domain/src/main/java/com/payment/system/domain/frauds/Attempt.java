@@ -13,7 +13,8 @@ public record Attempt(
         Instant at,
         GeoPoint location,
         Instant destinationCreatedAt,
-        ChannelDetails details
+        ChannelDetails details,
+        RequestContext context
 ) implements AssertionConcern {
 
     public Attempt {
@@ -23,11 +24,28 @@ public record Attempt(
         this.assertArgumentNotNull(amount, "amount", "should not be null");
         this.assertArgumentNotNull(at, "at", "should not be null");
         this.assertArgumentNotNull(details, "details", "should not be null");
+        this.assertArgumentNotNull(context, "context", "should not be null");
         // TODO validate non negative in future and amount scale
     }
 
     public Channel channel() {
         return details.channel();
+    }
+
+    public Attempt withLocation(
+            final GeoPoint location
+    ) {
+        return new Attempt(
+                this.id(),
+                this.origin(),
+                this.destination(),
+                this.amount(),
+                this.at(),
+                location,
+                this.destinationCreatedAt(),
+                this.details(),
+                this.context()
+        );
     }
 
     public static Attempt pix(
@@ -38,8 +56,8 @@ public record Attempt(
             final Instant pixKeyCreatedAt,
             final Money amount,
             final Instant at,
-            final GeoPoint location,
-            final Instant destinationCreatedAt
+            final Instant destinationCreatedAt,
+            final RequestContext context
     ) {
         return new Attempt(
                 id,
@@ -47,9 +65,10 @@ public record Attempt(
                 destination,
                 amount,
                 at,
-                location,
+                null,
                 destinationCreatedAt,
-                new ChannelDetails.Pix(pixKey, pixKeyCreatedAt)
+                new ChannelDetails.Pix(pixKey, pixKeyCreatedAt),
+                context
         );
     }
 }
