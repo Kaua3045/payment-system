@@ -288,9 +288,9 @@ class InMemoryStatsRepositoryTest extends UnitTest {
                 NOW.minus(Duration.ofDays(30)),
                 Money.of(new BigDecimal(amount)),
                 at,
-                location,
-                NOW.minus(Duration.ofDays(30))
-        );
+                NOW.minus(Duration.ofDays(30)),
+                new RequestContext("123.456.789.012")
+        ).withLocation(location);
     }
 
     private static void assertMoney(String expected, Money actual) {
