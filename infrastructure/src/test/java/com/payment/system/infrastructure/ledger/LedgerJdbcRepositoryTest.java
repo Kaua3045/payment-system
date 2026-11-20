@@ -4,6 +4,8 @@ import com.payment.system.AbstractRepositoryTest;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.InsufficientFundsException;
+import com.payment.system.domain.exceptions.ReservationNotPendingException;
+import com.payment.system.domain.exceptions.SnapshotNotExistsException;
 import com.payment.system.domain.ledger.LedgerEntry;
 import com.payment.system.domain.ledger.LedgerReservation;
 import com.payment.system.domain.ledger.ReservationStatus;
@@ -27,10 +29,11 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
 
     @Test
     void givenAValidLedgerEntry_whenCallsSave_thenShouldPersistIt() {
+        final var aAccount = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
         Assertions.assertEquals(0, countLedgerEntries());
 
         final var aLedgerEntry = LedgerEntry.newCredit(
-                new AccountId(IdentifierUtils.generateNewMonotonicULID()),
+                aAccount.getId(),
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
                 Money.of(new BigDecimal(1000))
         );
@@ -272,6 +275,119 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
 
         this.ledgerRepository().cancelReservation(
                 new TransactionId(IdentifierUtils.generateNewMonotonicULID())
+        );
+    }
+
+    @Test
+    void givenAValidAccountStateIds_whenCallsLockAccountsInOrder_thenShouldLockThem() {
+        final var aAccount1 = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
+        final var aAccount2 = this.accountRepository().save(Account.newAccount(IdentifierUtils.generateNewULID().toString()));
+
+        Assertions.assertDoesNotThrow(() -> this.ledgerRepository().lockAccountsInOrder(List.of(aAccount1.getId(), aAccount2.getId())));
+    }
+
+    @Test
+    void givenAnAccountWithoutSnapshot_whenCallsSave_thenShouldThrowSnapshotNotExistsException() {
+        final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+
+        final var aLedgerEntry = LedgerEntry.newCredit(
+                accountId,
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
+                Money.of(new BigDecimal(1000))
+        );
+
+        final var exception = Assertions.assertThrows(
+                SnapshotNotExistsException.class,
+                () -> this.ledgerRepository().save(aLedgerEntry)
+        );
+
+        Assertions.assertEquals(
+                "Snapshot not exists for accountId " + accountId.value().toString(),
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void givenAConfirmedReservation_whenCallsConfirmReservation_thenShouldThrowReservationNotPendingException() {
+        final var aAccount = this.accountRepository().save(
+                Account.newAccount(IdentifierUtils.generateNewULID().toString())
+        );
+
+        this.ledgerRepository().save(
+                LedgerEntry.newCredit(
+                        aAccount.getId(),
+                        new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
+                        Money.of(new BigDecimal(1000))
+                )
+        );
+
+        final var aReservation = LedgerReservation.newReservation(
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
+                aAccount.getId(),
+                Money.of(new BigDecimal(500)),
+                InstantUtils.now().plus(1, ChronoUnit.DAYS)
+        );
+
+        this.ledgerRepository().createReservation(aReservation);
+        this.ledgerRepository().confirmReservation(aReservation.getTransactionId());
+
+        final var exception = Assertions.assertThrows(
+                ReservationNotPendingException.class,
+                () -> this.ledgerRepository().confirmReservation(aReservation.getTransactionId())
+        );
+
+        Assertions.assertEquals("Reservation is not pending", exception.getMessage());
+    }
+
+    @Test
+    void givenANonExistingReservation_whenCallsConfirmReservation_thenShouldThrowReservationNotPendingException() {
+        final var transactionId = new TransactionId(
+                IdentifierUtils.generateNewMonotonicULID()
+        );
+
+        final var exception = Assertions.assertThrows(
+                ReservationNotPendingException.class,
+                () -> this.ledgerRepository().confirmReservation(transactionId)
+        );
+
+        Assertions.assertEquals("Reservation is not pending", exception.getMessage());
+    }
+
+    @Test
+    void givenAReservationWithoutSnapshot_whenCallsConfirmReservation_thenShouldThrowSnapshotNotExistsException() {
+        final var aAccount = this.accountRepository().save(
+                Account.newAccount(IdentifierUtils.generateNewULID().toString())
+        );
+
+        this.ledgerRepository().save(
+                LedgerEntry.newCredit(
+                        aAccount.getId(),
+                        new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
+                        Money.of(new BigDecimal(1000))
+                )
+        );
+
+        final var aReservation = LedgerReservation.newReservation(
+                new TransactionId(IdentifierUtils.generateNewMonotonicULID()),
+                aAccount.getId(),
+                Money.of(new BigDecimal(500)),
+                InstantUtils.now().plus(1, ChronoUnit.DAYS)
+        );
+
+        this.ledgerRepository().createReservation(aReservation);
+
+        this.jdbcClient.sql("DELETE FROM ledger_snapshots WHERE account_id = :accountId")
+                .param("accountId", aAccount.getId().value().toString())
+                .update();
+
+        final var exception = Assertions.assertThrows(
+                SnapshotNotExistsException.class,
+                () -> this.ledgerRepository().confirmReservation(aReservation.getTransactionId())
+        );
+
+        Assertions.assertEquals(
+                "Snapshot not exists for accountId " + aAccount.getId().value().toString(),
+                exception.getMessage()
         );
     }
 }
