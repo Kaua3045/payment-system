@@ -17,6 +17,7 @@ import com.payment.system.domain.exceptions.FraudDenyException;
 import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NoStackTraceException;
 import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.ledger.LedgerEntry;
 import com.payment.system.domain.ledger.LedgerReservation;
@@ -114,8 +115,8 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                         aPixKeyResponse.pixKeyCreatedAt(),
                         input.amount(),
                         InstantUtils.now(),
-                        null,
-                        aToAccount.createdAt()
+                        aToAccount.createdAt(),
+                        new RequestContext(input.ip())
                 ));
 
                 if (fraudResult.verdict().equals(Verdict.DENY)) {
