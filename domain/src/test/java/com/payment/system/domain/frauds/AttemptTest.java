@@ -12,7 +12,7 @@ import java.time.temporal.ChronoUnit;
 class AttemptTest extends UnitTest {
 
     @Test
-    void givenAnValidValues_whenCreatePixAttempt_shouldBeOk() {
+    void givenAnValidValues_whenWithLocation_shouldBeOk() {
         final var aAttempt = Attempt.pix(
                 "idempotencyKey1234",
                 "originId12312312",
@@ -21,8 +21,35 @@ class AttemptTest extends UnitTest {
                 InstantUtils.now().minus(10, ChronoUnit.HOURS),
                 Money.of(new BigDecimal("100.00")),
                 InstantUtils.now(),
-                new GeoPoint(-547627, +753684683, "BR"),
-                InstantUtils.now().minus(10, ChronoUnit.DAYS)
+                InstantUtils.now().minus(10, ChronoUnit.DAYS),
+                new RequestContext("123.456.789.012")
+        );
+
+        final var aAttemptWithLocation = aAttempt.withLocation(new GeoPoint(-23.5505, -46.6333, "BR"));
+
+        Assertions.assertEquals("idempotencyKey1234", aAttemptWithLocation.id());
+        Assertions.assertEquals("originId12312312", aAttemptWithLocation.origin());
+        Assertions.assertEquals("destinationId12312237213", aAttemptWithLocation.destination());
+        Assertions.assertNotNull(aAttemptWithLocation.details());
+        Assertions.assertNotNull(aAttemptWithLocation.amount());
+        Assertions.assertNotNull(aAttemptWithLocation.at());
+        Assertions.assertNotNull(aAttemptWithLocation.location());
+        Assertions.assertNotNull(aAttemptWithLocation.destinationCreatedAt());
+        Assertions.assertEquals(Channel.PIX, aAttemptWithLocation.channel());
+    }
+
+    @Test
+    void givenAnValidValuesWithContext_whenCreatePixAttempt_shouldBeOk() {
+        final var aAttempt = Attempt.pix(
+                "idempotencyKey1234",
+                "originId12312312",
+                "destinationId12312237213",
+                "johndoe@gmail.com",
+                InstantUtils.now().minus(10, ChronoUnit.HOURS),
+                Money.of(new BigDecimal("100.00")),
+                InstantUtils.now(),
+                InstantUtils.now().minus(10, ChronoUnit.DAYS),
+                new RequestContext("123.456.789.012")
         );
 
 
@@ -32,7 +59,7 @@ class AttemptTest extends UnitTest {
         Assertions.assertNotNull(aAttempt.details());
         Assertions.assertNotNull(aAttempt.amount());
         Assertions.assertNotNull(aAttempt.at());
-        Assertions.assertNotNull(aAttempt.location());
+        Assertions.assertNull(aAttempt.location());
         Assertions.assertNotNull(aAttempt.destinationCreatedAt());
         Assertions.assertEquals(Channel.PIX, aAttempt.channel());
     }
