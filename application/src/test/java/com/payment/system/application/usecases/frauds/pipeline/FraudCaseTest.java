@@ -4,6 +4,7 @@ import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.frauds.Assessment;
 import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.frauds.features.FeatureVector;
 import com.payment.system.domain.utils.InstantUtils;
@@ -175,8 +176,8 @@ class FraudCaseTest extends UnitTest {
                 InstantUtils.now().minus(10, ChronoUnit.HOURS),
                 Money.of(new BigDecimal("500.00")),
                 InstantUtils.now(),
-                null,
-                InstantUtils.now().minus(10, ChronoUnit.DAYS)
+                InstantUtils.now().minus(10, ChronoUnit.DAYS),
+                new RequestContext("123.456.789.012")
         );
     }
 }

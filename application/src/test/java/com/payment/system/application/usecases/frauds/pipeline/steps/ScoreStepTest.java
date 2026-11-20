@@ -6,6 +6,7 @@ import com.payment.system.application.usecases.frauds.pipeline.FraudStep;
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.frauds.features.FeatureVector;
 import com.payment.system.domain.frauds.model.Sigmoid;
@@ -43,8 +44,8 @@ class ScoreStepTest extends UnitTest {
                 NOW,
                 Money.of(amount),
                 NOW,
-                null,
-                NOW
+                NOW,
+                new RequestContext("123.456.789.012")
         );
     }
 

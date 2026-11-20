@@ -5,10 +5,7 @@ import com.payment.system.application.repositories.StatsRepository;
 import com.payment.system.application.usecases.frauds.pipeline.FraudCase;
 import com.payment.system.application.usecases.frauds.pipeline.FraudPipeline;
 import com.payment.system.application.usecases.frauds.pipeline.FraudStep;
-import com.payment.system.domain.frauds.Assessment;
-import com.payment.system.domain.frauds.Attempt;
-import com.payment.system.domain.frauds.Channel;
-import com.payment.system.domain.frauds.Verdict;
+import com.payment.system.domain.frauds.*;
 import com.payment.system.domain.utils.InstantUtils;
 import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,8 +155,8 @@ class AssessFraudUseCaseTest extends UseCaseTest {
                 InstantUtils.now().minus(10, ChronoUnit.HOURS),
                 Money.of(new BigDecimal("500.00")),
                 InstantUtils.now(),
-                null,
-                InstantUtils.now().minus(10, ChronoUnit.DAYS)
+                InstantUtils.now().minus(10, ChronoUnit.DAYS),
+                new RequestContext("123.456.789.012")
         );
     }
 }

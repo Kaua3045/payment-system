@@ -6,6 +6,7 @@ import com.payment.system.application.usecases.frauds.pipeline.FraudPipeline;
 import com.payment.system.application.usecases.frauds.pipeline.FraudStep;
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.Stats;
 import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.frauds.features.FeatureExtractor;
@@ -36,8 +37,8 @@ class EnrichStepTest extends UnitTest {
                 NOW,
                 Money.of(new BigDecimal("100.00")),
                 NOW,
-                null,
-                NOW
+                NOW,
+                new RequestContext("123.456.789.012")
         );
     }
 
