@@ -105,6 +105,7 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
 
                 // TODO: [FRAUDE] Verificação síncrona de risco antes da reserva
                 // TODO adicionar a location, ja recebo o ip no input, so falta chamar um gateway pra pegar a location, e ai passar para o assess
+                // ou enviar o ip pro assess e ele chama o gateway (acho melhor)
                 final var fraudResult = this.fraudGateway.assess(Attempt.pix(
                         input.idempotencyKey(),
                         aFromAccount.accountId().value().toString(),
@@ -146,6 +147,9 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 );
 
                 final var aOutput = this.transactionManager.execute(() -> {
+                    span.runInSpan("db.ledger.lock-accounts-balance-state",
+                            () -> this.ledgerRepository.lockAccountsInOrder(List.of(aFromAccount.accountId(), aToAccount.accountId())));
+
                     span.runInSpan("db.ledger.reserve", () -> this.ledgerRepository.createReservation(aReservation));
 
                     aTransaction.complete();
