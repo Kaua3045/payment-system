@@ -31,7 +31,7 @@ public class AbstractRepositoryTest {
     private static final String LEDGER_RESERVATIONS_TABLE = "ledger_reservations";
 
     @Autowired
-    private JdbcClient jdbcClient;
+    public JdbcClient jdbcClient;
 
     @Autowired
     private NamedParameterJdbcOperations operations;
