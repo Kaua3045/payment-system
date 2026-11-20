@@ -5,6 +5,7 @@ import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.ValidationException;
 import com.payment.system.domain.frauds.Attempt;
 import com.payment.system.domain.frauds.Channel;
+import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.features.FeatureVector;
 import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class RulesTest extends UnitTest {
     static final FeatureVector NIGHT = FeatureVector.builder().set(FeatureVector.NIGHT, 1).build();
 
     static Attempt pix(String amount) {
-        return Attempt.pix("id", "a", "b", "b@pix", NOW, Money.of(new BigDecimal(amount)), NOW, null, NOW);
+        return Attempt.pix("id", "a", "b", "b@pix", NOW, Money.of(new BigDecimal(amount)), NOW, NOW, new RequestContext("2793712687316287"));
     }
 
     @Test

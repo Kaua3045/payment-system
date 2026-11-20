@@ -3,6 +3,7 @@ package com.payment.system.domain.frauds.features;
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.frauds.Attempt;
 import com.payment.system.domain.frauds.GeoPoint;
+import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.Stats;
 import com.payment.system.domain.valueobjects.Money;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class FeatureExtractorTest extends UnitTest {
     final FeatureExtractor fx = new FeatureExtractor();
 
     Attempt attempt(Instant at, GeoPoint loc, Instant destCreated, Instant keyCreated) {
-        return Attempt.pix("id", "maria", "joao", "joao@pix", keyCreated, Money.of(new BigDecimal(10_000)), at, loc, destCreated);
+        return Attempt.pix("id", "maria", "joao", "joao@pix", keyCreated, Money.of(new BigDecimal(10_000)), at, destCreated, new RequestContext("216126736712")).withLocation(loc);
     }
 
     Stats seenAt(GeoPoint place, Instant when, boolean knownPayee) {
@@ -69,8 +70,8 @@ class FeatureExtractorTest extends UnitTest {
     @Test
     void instrumentRecentIsNeutralAcrossChannels() {
         Instant twoHoursAgo = NOON.minus(Duration.ofHours(2));
-        Attempt pixKey = Attempt.pix("p1", "maria", "joao", "joao@pix", twoHoursAgo, VALUE, NOON, null, OLD);
-        Attempt pixKeyTwo = Attempt.pix("p1", "maria", "joao", "joao@pix", OLD, VALUE, NOON, null, OLD);
+        Attempt pixKey = Attempt.pix("p1", "maria", "joao", "joao@pix", twoHoursAgo, VALUE, NOON, OLD, new RequestContext("2793712687316287"));
+        Attempt pixKeyTwo = Attempt.pix("p1", "maria", "joao", "joao@pix", OLD, VALUE, NOON, OLD, new RequestContext("2793712687316287"));
         assertEquals(1.0, fx.extract(pixKey, Stats.empty()).get(INSTRUMENT_RECENT), 0.0); // pix new
         assertEquals(0.0, fx.extract(pixKeyTwo, Stats.empty()).get(INSTRUMENT_RECENT), 0.0);
     }
@@ -136,7 +137,7 @@ class FeatureExtractorTest extends UnitTest {
     void missingInstrumentCreationDateUsesUnknownAge() {
         Attempt pixKey = Attempt.pix(
                 "p1", "maria", "joao", "joao@pix",
-                null, VALUE, NOON, null, OLD
+                null, VALUE, NOON, OLD, new RequestContext("2793712687316287")
         );
 
         FeatureVector f = fx.extract(pixKey, Stats.empty());
@@ -184,7 +185,7 @@ class FeatureExtractorTest extends UnitTest {
 
         Attempt attempt = Attempt.pix(
                 "ratio-test", "maria", "joao", "joao@pix",
-                OLD, Money.of(new BigDecimal("200.00")), NOON, null, OLD
+                OLD, Money.of(new BigDecimal("200.00")), NOON, OLD, new RequestContext("2793712687316287")
         );
 
         FeatureVector f = fx.extract(attempt, stats);
@@ -209,7 +210,7 @@ class FeatureExtractorTest extends UnitTest {
 
         Attempt attempt = Attempt.pix(
                 "ratio-cap-test", "maria", "joao", "joao@pix",
-                OLD, Money.of(new BigDecimal("1000.00")), NOON, null, OLD
+                OLD, Money.of(new BigDecimal("1000.00")), NOON, OLD, new RequestContext("2793712687316287")
         );
 
         FeatureVector f = fx.extract(attempt, stats);
