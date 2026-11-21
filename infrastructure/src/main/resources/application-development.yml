@@ -5,6 +5,9 @@ application:
   environment: ${DEPLOYMENT_ENVIRONMENT_NAME:dev}
   instance: payment-system-01
 
+fraud:
+  model-path: ./src/main/resources/fraud/dev-model.tree
+
 redis:
   host: localhost
   port: 6379

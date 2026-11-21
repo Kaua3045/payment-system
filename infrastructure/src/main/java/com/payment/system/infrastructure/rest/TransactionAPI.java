@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,7 @@ public interface TransactionAPI {
             @ApiResponse(responseCode = "422", description = "A business rule was violated"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    ResponseEntity<CreateTransactionResponse> createTransaction(@RequestHeader(IdempotencyKey.IDEMPOTENCY_KEY_HEADER) String idempotencyKey, @RequestBody CreateTransactionRequest request);
+    ResponseEntity<CreateTransactionResponse> createTransaction(@RequestHeader(IdempotencyKey.IDEMPOTENCY_KEY_HEADER) String idempotencyKey, @RequestBody CreateTransactionRequest request, HttpServletRequest requestContext);
 
     @PostMapping(
             value = "/deposit",

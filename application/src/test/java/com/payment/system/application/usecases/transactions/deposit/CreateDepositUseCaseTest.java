@@ -19,6 +19,7 @@ import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.utils.InstantUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -26,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
+import java.time.temporal.ChronoUnit;
 import java.util.function.Supplier;
 
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
@@ -55,8 +57,10 @@ class CreateDepositUseCaseTest extends UseCaseTest {
     @Test
     void givenAValidCommand_whenExecute_shouldCreateDeposit() {
         final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
         final var pixKeyValue = "pix-key-value";
+        final var pixKeyCreatedAt = InstantUtils.now();
 
         final var aSource = "atm";
         final var idempotencyKey = "idem-123";
@@ -65,10 +69,10 @@ class CreateDepositUseCaseTest extends UseCaseTest {
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString(), pixKeyCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId, accountCreatedAt));
 
         Mockito.when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(returnsFirstArg());
@@ -154,7 +158,9 @@ class CreateDepositUseCaseTest extends UseCaseTest {
     @Test
     void givenToAccountInactive_whenExecute_shouldThrowDomainException() {
         final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyCreatedAt = InstantUtils.now();
 
         final var expectedErrorMessage = "Account To is not active";
 
@@ -162,10 +168,10 @@ class CreateDepositUseCaseTest extends UseCaseTest {
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString(), pixKeyCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.BLOCKED, toAccountId));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.BLOCKED, toAccountId, accountCreatedAt));
 
         final var command = CreateDepositCommand.with(
                 "pix",
@@ -203,17 +209,19 @@ class CreateDepositUseCaseTest extends UseCaseTest {
     @Test
     void givenAnConflictingVersion_whenExecute_shouldThrowConflictException() {
         final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyCreatedAt = InstantUtils.now();
         final var idempotencyKey = "idem-conflict";
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString(), pixKeyCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId, accountCreatedAt));
 
         Mockito.when(transactionRepository.save(any()))
                 .thenThrow(ConflictException.with("Version conflict", "version_conflict"));
@@ -262,17 +270,19 @@ class CreateDepositUseCaseTest extends UseCaseTest {
     @Test
     void givenAnInternalError_whenCreateReservation_thenThrowInternalErrorException() {
         final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyCreatedAt = InstantUtils.now();
         final var idempotencyKey = "idem-internal-error";
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString(), pixKeyCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId, accountCreatedAt));
 
         Mockito.when(transactionRepository.save(any()))
                 .thenThrow(InternalErrorException.with("Database error"));
@@ -296,17 +306,19 @@ class CreateDepositUseCaseTest extends UseCaseTest {
     @Test
     void givenAnRuntimeException_whenCreateReservation_thenThrowException() {
         final var toAccountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyCreatedAt = InstantUtils.now();
         final var idempotencyKey = "idem-runtime-error";
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccountId.value().toString(), pixKeyCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(toAccountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccountId, accountCreatedAt));
 
         Mockito.when(transactionRepository.save(any()))
                 .thenThrow(new RuntimeException("Unexpected error"));

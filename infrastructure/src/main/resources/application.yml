@@ -6,6 +6,21 @@ idempotency-key:
   storage:
     type: in-memory
 
+fraud:
+  review-at: 0.30
+  deny-at: 0.80
+  amount-limit: 5000.00
+  night-limit: 1000.00
+  max-per-minute: 3
+  velocity-boost: 2.0
+  max-speed-kmh: 900
+  travel-boost: 3.0
+  fail-open-below: 200.00
+
+ledger:
+  reservation:
+    expires-in-minutes: 10
+
 logging:
   level:
     ROOT: WARN

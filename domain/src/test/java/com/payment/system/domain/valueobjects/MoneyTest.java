@@ -7,8 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class MoneyTest extends UnitTest {
 
@@ -70,6 +69,16 @@ class MoneyTest extends UnitTest {
     }
 
     @Test
+    void givenTwoMoney_whenIsLessThan_thenReturnFalse() {
+        final var moneyOne = new Money(new BigDecimal("55.0"));
+        final var moneyTwo = new Money(new BigDecimal("10.0"));
+
+        final var actual = moneyOne.isLessThan(moneyTwo);
+
+        assertFalse(actual);
+    }
+
+    @Test
     void givenNothing_whenCreateZeroMoney_thenReturnMoneyWithZeroAmount() {
         final var actual = Money.zero();
 
@@ -127,6 +136,16 @@ class MoneyTest extends UnitTest {
     }
 
     @Test
+    void givenMoney_whenCallGreaterThan__thenReturnTrueIfGreaterReturnFalse() {
+        final var moneyOne = new Money(new BigDecimal("10.0"));
+        final var moneyTwo = new Money(new BigDecimal("51.0"));
+
+        final var actual = moneyOne.isGreaterThan(moneyTwo);
+
+        assertFalse(actual);
+    }
+
+    @Test
     void givenMoney_whenCallLessThanOrEqual_thenReturnTrueIfLessOrEqual() {
         final var moneyOne = new Money(new BigDecimal("5.0"));
         final var moneyTwo = new Money(new BigDecimal("10.0"));
@@ -134,5 +153,15 @@ class MoneyTest extends UnitTest {
         final var actual = moneyOne.isLessThanOrEqual(moneyTwo);
 
         assertTrue(actual);
+    }
+
+    @Test
+    void givenMoney_whenCallLessThanOrEqual_thenReturnTrueIfLessOrEqualReturnFalse() {
+        final var moneyOne = new Money(new BigDecimal("51.0"));
+        final var moneyTwo = new Money(new BigDecimal("10.0"));
+
+        final var actual = moneyOne.isLessThanOrEqual(moneyTwo);
+
+        assertFalse(actual);
     }
 }

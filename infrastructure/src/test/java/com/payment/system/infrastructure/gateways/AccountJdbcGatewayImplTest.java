@@ -35,6 +35,7 @@ class AccountJdbcGatewayImplTest {
 
         Assertions.assertEquals(aAccount.getId(), aAccountResponse.accountId());
         Assertions.assertEquals(aAccount.getStatus(), aAccountResponse.status());
+        Assertions.assertEquals(aAccount.getCreatedAt(), aAccountResponse.createdAt());
     }
 
     @Test

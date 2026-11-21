@@ -19,5 +19,7 @@ public interface LedgerRepository {
     void confirmReservation(TransactionId transactionId);
     void cancelReservation(TransactionId transactionId);
 
+    void lockAccountsInOrder(List<AccountId> accountIds);
+
     Optional<LedgerReservation> findReservationByTransactionId(TransactionId transactionId);
 }

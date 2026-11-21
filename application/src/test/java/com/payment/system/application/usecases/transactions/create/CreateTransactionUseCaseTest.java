@@ -5,6 +5,7 @@ import com.payment.system.application.exceptions.AccountIsNotActiveException;
 import com.payment.system.application.exceptions.PixKeyIsNotActiveException;
 import com.payment.system.application.exceptions.UseCaseInputCannotBeNullException;
 import com.payment.system.application.gateways.AccountGateway;
+import com.payment.system.application.gateways.FraudGateway;
 import com.payment.system.application.gateways.PixKeyGateway;
 import com.payment.system.application.repositories.LedgerRepository;
 import com.payment.system.application.repositories.TransactionRepository;
@@ -12,22 +13,24 @@ import com.payment.system.application.wrapper.TransactionManager;
 import com.payment.system.domain.accounts.Account;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.accounts.AccountStatus;
-import com.payment.system.domain.exceptions.DomainException;
-import com.payment.system.domain.exceptions.InsufficientFundsException;
-import com.payment.system.domain.exceptions.InternalErrorException;
-import com.payment.system.domain.exceptions.NotFoundException;
+import com.payment.system.domain.exceptions.*;
+import com.payment.system.domain.frauds.Assessment;
+import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.pixkeys.PixKey;
 import com.payment.system.domain.pixkeys.PixKeyId;
 import com.payment.system.domain.pixkeys.PixKeyType;
 import com.payment.system.domain.transactions.Transaction;
 import com.payment.system.domain.utils.IdentifierUtils;
+import com.payment.system.domain.utils.InstantUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.function.Supplier;
 
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
@@ -43,6 +46,9 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     private PixKeyGateway pixKeyGateway;
 
     @Mock
+    private FraudGateway fraudGateway;
+
+    @Mock
     private LedgerRepository ledgerRepository;
 
     @Mock
@@ -51,28 +57,51 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     @Mock
     private TransactionManager transactionManager;
 
-    @InjectMocks
-    private DefaultCreateTransactionUseCase useCase;
+    private int reservationExpiresInMinutes = 10;
+
+    private CreateTransactionUseCase useCase;
+
+    @BeforeEach
+    void setup() {
+        useCase = new DefaultCreateTransactionUseCase(
+                accountGateway,
+                pixKeyGateway,
+                fraudGateway,
+                transactionRepository,
+                ledgerRepository,
+                transactionManager,
+                metrics,
+                applicationLogger,
+                tracerWrapper,
+                reservationExpiresInMinutes
+        );
+    }
 
     @Test
     void givenAValidCommand_whenExecute_shouldCreateTransaction() {
         final var fromAccount = Account.newAccount("user-1234");
         final var toAccount = Account.newAccount("user-6789");
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+        final var pixKeyCreatedAt = InstantUtils.now();
         final var idempotencyKey = "idem-123";
         final var amount = BigDecimal.TEN;
+        final var ip = "120.57.189.108";
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccount.getId().value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, toAccount.getId().value().toString(), pixKeyCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(fromAccount.getId().value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, fromAccount.getId()));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, fromAccount.getId(), accountCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(toAccount.getId().value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccount.getId()));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccount.getId(), accountCreatedAt));
+
+        Mockito.when(fraudGateway.assess(Mockito.any()))
+                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
 
         Mockito.when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(returnsFirstArg());
@@ -82,7 +111,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix-key-value",
                 PixKeyType.RANDOM.name(),
                 amount,
-                idempotencyKey
+                idempotencyKey,
+                ip
         );
 
         final var output = Assertions.assertDoesNotThrow(() -> useCase.execute(command));
@@ -120,7 +150,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.ZERO,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         final var aException = Assertions.assertThrows(
@@ -134,7 +165,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     @Test
     void givenFromAccountNotFound_whenExecute_shouldThrowNotFoundException() {
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, new PixKeyId(IdentifierUtils.generateNewMonotonicULID()), "to-acc"));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true,
+                        new PixKeyId(IdentifierUtils.generateNewMonotonicULID()), "to-acc", InstantUtils.now()));
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
@@ -149,7 +181,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         final var aException = Assertions.assertThrows(NotFoundException.class, () -> useCase.execute(command));
@@ -160,22 +193,24 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     @Test
     void givenFromAccountInactive_whenExecute_shouldThrowAccountIsNotActiveException() {
         final var accountId = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, new PixKeyId(IdentifierUtils.generateNewMonotonicULID()), "to-acc"));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, new PixKeyId(IdentifierUtils.generateNewMonotonicULID()), "to-acc", InstantUtils.now()));
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(accountGateway.accountOfId(accountId.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.BLOCKED, accountId));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.BLOCKED, accountId, accountCreatedAt));
 
         final var command = CreateTransactionCommand.with(
                 accountId.value().toString(),
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         Assertions.assertThrows(AccountIsNotActiveException.class, () -> useCase.execute(command));
@@ -191,7 +226,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         final var aException = Assertions.assertThrows(NotFoundException.class, () -> useCase.execute(command));
@@ -203,26 +239,28 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     void givenToAccountInactive_whenExecute_shouldThrowAccountIsNotActiveException() {
         final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString(), InstantUtils.now()));
 
         Mockito.when(accountGateway.accountOfId(from.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from, accountCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(to.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.BLOCKED, to));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.BLOCKED, to, accountCreatedAt));
 
         final var command = CreateTransactionCommand.with(
                 from.value().toString(),
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         Assertions.assertThrows(AccountIsNotActiveException.class, () -> useCase.execute(command));
@@ -232,19 +270,23 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     void givenInsufficientFunds_whenExecute_shouldThrowInsufficientFundsException() {
         final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString(), InstantUtils.now()));
 
         Mockito.when(accountGateway.accountOfId(from.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from, accountCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(to.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
+
+        Mockito.when(fraudGateway.assess(Mockito.any()))
+                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
 
         Mockito.doThrow(new InsufficientFundsException())
                 .when(ledgerRepository).createReservation(any());
@@ -254,7 +296,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         Assertions.assertThrows(InsufficientFundsException.class, () -> useCase.execute(command));
@@ -275,7 +318,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         Assertions.assertThrows(PixKeyIsNotActiveException.class, () -> useCase.execute(command));
@@ -285,19 +329,23 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     void givenAnInternalError_whenCreateReservation_shouldThrowInternalErrorException() {
         final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString(), InstantUtils.now()));
 
         Mockito.when(accountGateway.accountOfId(from.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from, accountCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(to.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
+
+        Mockito.when(fraudGateway.assess(Mockito.any()))
+                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
 
         Mockito.doThrow(InternalErrorException.with("Database connection error"))
                 .when(ledgerRepository).createReservation(any());
@@ -307,7 +355,8 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         final var aException = Assertions.assertThrows(InternalErrorException.class, () -> useCase.execute(command));
@@ -320,19 +369,23 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
     void givenRuntimeException_whenCreateReservation_shouldThrowException() {
         final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
         final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
         final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
 
         Mockito.when(transactionManager.execute(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
 
         Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
-                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString()));
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString(), InstantUtils.now()));
 
         Mockito.when(accountGateway.accountOfId(from.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from, accountCreatedAt));
 
         Mockito.when(accountGateway.accountOfId(to.value().toString()))
-                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to));
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
+
+        Mockito.when(fraudGateway.assess(Mockito.any()))
+                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
 
         Mockito.doThrow(new RuntimeException("Unexpected error"))
                 .when(ledgerRepository).createReservation(any());
@@ -342,11 +395,84 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 "pix",
                 "random",
                 BigDecimal.TEN,
-                "idem"
+                "idem",
+                "120.57.189.108"
         );
 
         final var aException = Assertions.assertThrows(RuntimeException.class, () -> useCase.execute(command));
 
         Assertions.assertEquals("Unexpected error", aException.getMessage());
+    }
+
+    @Test
+    void givenFraudResultIsDeny_whenCallFraudService_shouldThrowException() {
+        final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
+        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString(), InstantUtils.now()));
+
+        Mockito.when(accountGateway.accountOfId(from.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from, accountCreatedAt));
+
+        Mockito.when(accountGateway.accountOfId(to.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
+
+        Mockito.when(fraudGateway.assess(Mockito.any()))
+                .thenReturn(new Assessment(Verdict.DENY, 0.90, List.of("AMOUNT_LIMIT")));
+
+        final var command = CreateTransactionCommand.with(
+                from.value().toString(),
+                "pix",
+                "random",
+                new BigDecimal("10000.00"),
+                "idem",
+                "120.57.189.108"
+        );
+
+        final var aException = Assertions.assertThrows(FraudDenyException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Transaction rejected by fraud analysis", aException.getMessage());
+    }
+
+    @Test
+    void givenFraudResultIsManualReview_whenCallFraudService_shouldThrowException() {
+        final var from = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var to = new AccountId(IdentifierUtils.generateNewMonotonicULID());
+        final var accountCreatedAt = InstantUtils.now().minus(10, ChronoUnit.DAYS);
+        final var pixKeyId = new PixKeyId(IdentifierUtils.generateNewMonotonicULID());
+
+        Mockito.when(transactionManager.execute(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0, Supplier.class).get());
+
+        Mockito.when(pixKeyGateway.pixKeyOfActiveByValue(anyString(), anyString()))
+                .thenReturn(new PixKeyGateway.PixKeyActiveResponse(true, pixKeyId, to.value().toString(), InstantUtils.now()));
+
+        Mockito.when(accountGateway.accountOfId(from.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, from, accountCreatedAt));
+
+        Mockito.when(accountGateway.accountOfId(to.value().toString()))
+                .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
+
+        Mockito.when(fraudGateway.assess(Mockito.any()))
+                .thenReturn(new Assessment(Verdict.MANUAL_REVIEW, 0.75, List.of("NEW_PAYEER")));
+
+        final var command = CreateTransactionCommand.with(
+                from.value().toString(),
+                "pix",
+                "random",
+                new BigDecimal("3000.00"),
+                "idem",
+                "120.57.189.108"
+        );
+
+        final var aException = Assertions.assertThrows(InternalErrorException.class, () -> useCase.execute(command));
+
+        Assertions.assertEquals("Manual review not implemented", aException.getMessage());
     }
 }

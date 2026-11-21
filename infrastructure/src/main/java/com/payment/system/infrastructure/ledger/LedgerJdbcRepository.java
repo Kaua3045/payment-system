@@ -4,6 +4,8 @@ import com.github.f4b6a3.ulid.Ulid;
 import com.payment.system.application.repositories.LedgerRepository;
 import com.payment.system.domain.accounts.AccountId;
 import com.payment.system.domain.exceptions.InsufficientFundsException;
+import com.payment.system.domain.exceptions.ReservationNotPendingException;
+import com.payment.system.domain.exceptions.SnapshotNotExistsException;
 import com.payment.system.domain.ledger.LedgerEntry;
 import com.payment.system.domain.ledger.LedgerReservation;
 import com.payment.system.domain.ledger.LedgerReservationId;
@@ -32,6 +34,11 @@ import java.util.stream.Collectors;
 @Component
 public class LedgerJdbcRepository implements LedgerRepository {
 
+    private static final String INSERT_ENTRY_SQL = """
+        INSERT INTO ledger_entries (id, account_id, transaction_id, amount, type, created_at, account_seq)
+        VALUES (:id, :accountId, :transactionId, :amount, :type, :createdAt, :accountSeq)
+        """;
+
     private final DatabaseClient databaseClient;
 
     public LedgerJdbcRepository(final DatabaseClient databaseClient) {
@@ -40,28 +47,39 @@ public class LedgerJdbcRepository implements LedgerRepository {
 
     @Override
     public void save(final LedgerEntry entry) {
-        final var sql = """
-                INSERT INTO ledger_entries (id, account_id, transaction_id, amount, type, created_at)
-                VALUES (:id, :accountId, :transactionId, :amount, :type, :createdAt)
-                """;
-        this.databaseClient.update(sql, toParams(entry));
-        updateSnapshot(entry);
+        saveAll(List.of((entry)));
     }
 
     @Override
     public void saveAll(final List<LedgerEntry> entries) {
-        final var sql = """
-                INSERT INTO ledger_entries (id, account_id, transaction_id, amount, type, created_at)
-                VALUES (:id, :accountId, :transactionId, :amount, :type, :createdAt)
-                """;
-        final var batchParams = entries.stream()
-                .map(this::toParams)
-                .collect(Collectors.toList());
-        this.databaseClient.batchUpdate(sql, batchParams);
-
-        for (final var entry : entries) {
-            updateSnapshot(entry);
+        if (entries.isEmpty()) {
+            return;
         }
+
+        // TreeMap: ordem determinística por id. As linhas já devem estar travadas por lockAccountsInOrder,
+        // mas este método não deve depender de quem o chamou.
+        final var entriesByAccount = entries.stream()
+                .collect(Collectors.groupingBy(
+                        entry -> entry.getAccountId().value().toString(),
+                        TreeMap::new,
+                        Collectors.toList()
+                ));
+
+        final var rows = new ArrayList<Map<String, Object>>(entries.size());
+
+        for (final var group : entriesByAccount.entrySet()) {
+            final var accountEntries = group.getValue();
+            long seq = applyToSnapshot(group.getKey(), accountEntries); // número da PRIMEIRA entry desta conta
+
+            for (final var entry : accountEntries) {
+                final var params = toParams(entry);
+                params.put("accountSeq", seq++);
+                rows.add(params);
+            }
+        }
+
+        // só aqui as entries entram, já numeradas (se algo lançou antes, nada foi gravado)
+        this.databaseClient.batchUpdate(INSERT_ENTRY_SQL, rows);
     }
 
     @Override
@@ -131,121 +149,34 @@ public class LedgerJdbcRepository implements LedgerRepository {
 
     @Override
     public void confirmReservation(final TransactionId transactionId) {
-        final var sql = """
-                UPDATE ledger_reservations
-                SET status = 'CONFIRMED'
-                WHERE transaction_id = :transactionId
-                  AND status = 'PENDING'
-                """;
-
-        this.databaseClient.update(
-                sql,
-                Map.of("transactionId", transactionId.value().toString())
-        );
-
-        final var reservation = this.databaseClient.queryOne(
-                "SELECT account_id, amount FROM ledger_reservations WHERE transaction_id = :transactionId AND status = 'CONFIRMED'",
-                Map.of("transactionId", transactionId.value().toString()),
-                rs -> Map.of(
-                        "accountId", rs.getString("account_id"),
-                        "amount", rs.getBigDecimal("amount")
-                )
-        ).orElseThrow();
-
-
-//        final var sql = """
-//                UPDATE ledger_reservations
-//                SET status = 'CONFIRMED'
-//                WHERE transaction_id = :transactionId
-//                  AND status = 'PENDING'
-//                RETURNING account_id, amount
-//                """;
-
-//        final var reservation = this.databaseClient.queryOne(
-//                sql,
-//                Map.of("transactionId", transactionId.value().toString()),
-//                rs -> Map.of(
-//                        "accountId", rs.getString("account_id"),
-//                        "amount", rs.getBigDecimal("amount")
-//                )
-//        ).orElseThrow();
-
-        final var releaseSql = """
-                UPDATE ledger_snapshots
-                SET
-                    reserved_balance = reserved_balance - :amount,
-                    updated_at = NOW()
-                WHERE account_id = :accountId
-                """;
-
-        this.databaseClient.update(
-                releaseSql,
-                Map.of(
-                        "accountId", reservation.get("accountId"),
-                        "amount", reservation.get("amount")
-                )
-        );
+        releaseReservation(transactionId, ReservationStatus.CONFIRMED, true);
     }
 
     @Override
     public void cancelReservation(final TransactionId transactionId) {
-        final var sql = """
-                UPDATE ledger_reservations
-                SET status = 'CANCELLED'
-                WHERE transaction_id = :transactionId
-                  AND status = 'PENDING'
-                """;
+        releaseReservation(transactionId, ReservationStatus.CANCELLED, false);
+    }
 
-        this.databaseClient.update(
-                sql,
-                Map.of("transactionId", transactionId.value().toString())
-        );
+    @Override
+    public void lockAccountsInOrder(final List<AccountId> accountIds) {
+        final var ids = accountIds.stream()
+                .map(id -> id.value().toString())
+                .distinct() // remove duplicates
+                .sorted() // lock in deterministic order to avoid deadlocks
+                .toList();
 
-        final var reservation = this.databaseClient.queryOne(
-                "SELECT account_id, amount FROM ledger_reservations WHERE transaction_id = :transactionId AND status = 'CANCELLED'",
-                Map.of("transactionId", transactionId.value().toString()),
-                rs -> Map.of(
-                        "accountId", rs.getString("account_id"),
-                        "amount", rs.getBigDecimal("amount")
-                )
-        ).orElse(null);
-
-//        final var sql = """
-//                UPDATE ledger_reservations
-//                SET status = 'CANCELLED'
-//                WHERE transaction_id = :transactionId
-//                  AND status = 'PENDING'
-//                RETURNING account_id, amount
-//                """;
-//
-//        final var reservation = this.databaseClient.queryOne(
-//                sql,
-//                Map.of("transactionId", transactionId.value().toString()),
-//                rs -> Map.of(
-//                        "accountId", rs.getString("account_id"),
-//                        "amount", rs.getBigDecimal("amount")
-//                )
-//        ).orElse(null);
-
-        if (reservation == null) {
-            return;
+        for (final var id : ids) {
+            this.databaseClient.queryOne(
+                    """
+                            SELECT account_id
+                            FROM ledger_snapshots
+                            WHERE account_id = :accountId
+                            FOR UPDATE
+                            """,
+                    Map.of("accountId", id),
+                    rs -> rs.getString("account_id")
+            ).orElseThrow();
         }
-
-        final var releaseSql = """
-                UPDATE ledger_snapshots
-                SET
-                    reserved_balance = reserved_balance - :amount,
-                    updated_at = NOW()
-                WHERE account_id = :accountId
-                """;
-
-        this.databaseClient.update(
-                releaseSql,
-                Map.of(
-                        "accountId", reservation.get("accountId"),
-                        "amount", reservation.get("amount")
-                )
-        );
     }
 
     @Override
@@ -291,24 +222,68 @@ public class LedgerJdbcRepository implements LedgerRepository {
 //        this.databaseClient.update(sql, Map.of());
 //    }
 
-    private void updateSnapshot(final LedgerEntry entry) {
-        final var sql = """
+    private void releaseReservation(final TransactionId transactionId, final ReservationStatus newStatus, final boolean mustBePending) {
+        final var txId = transactionId.value().toString();
+
+        final var changed = this.databaseClient.update("""
+                UPDATE ledger_reservations
+                SET status = :status
+                WHERE transaction_id = :transactionId
+                    AND status = 'PENDING'
+                """, Map.of("status", newStatus.name(), "transactionId", txId));
+
+        if (changed == 0) {
+            // Ja confirmada/cancelada/expirada (retry) ou inexistente: NUNCA libera de novo
+            if (mustBePending) {
+                throw new ReservationNotPendingException();
+            }
+            return;  // cancelar duas vezes é inofensivo
+        }
+
+        // changed == 1: a linha está travada por esta transação, então o SELECT é seguro
+        final var reservation = this.databaseClient.queryOne(
+                "SELECT account_id, amount FROM ledger_reservations WHERE transaction_id = :transactionId",
+                Map.of("transactionId", txId),
+                rs -> Map.of("accountId", rs.getString("account_id"), "amount", rs.getBigDecimal("amount"))
+        ).orElseThrow();
+
+        final var released = this.databaseClient.update("""
                 UPDATE ledger_snapshots
-                SET
-                    balance = balance + :amount,
-                    last_ledger_id = :ledgerId,
+                SET reserved_balance = reserved_balance - :amount,
                     updated_at = NOW()
                 WHERE account_id = :accountId
-                """;
+                """, Map.of("accountId", reservation.get("accountId"), "amount", reservation.get("amount")));
 
-        this.databaseClient.update(
-                sql,
-                Map.of(
-                        "accountId", entry.getAccountId().value().toString(),
-                        "amount", entry.getAmount().amount(),
-                        "ledgerId", entry.getId().value().toString()
-                )
-        );
+        if (released != 1) {
+            throw new SnapshotNotExistsException(reservation.get("accountId").toString());
+        }
+    }
+
+    private long applyToSnapshot(final String accountId, final List<LedgerEntry> accountEntries) {
+        final var delta = accountEntries.stream()
+                .map(entry -> entry.getAmount().amount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        final var updated = this.databaseClient.update("""
+            UPDATE ledger_snapshots
+            SET balance = balance + :delta,
+                last_seq = last_seq + :count,
+                updated_at = NOW()
+            WHERE account_id = :accountId
+            """, Map.of("delta", delta, "count", accountEntries.size(), "accountId", accountId));
+
+        if (updated != 1) {
+            throw new SnapshotNotExistsException(accountId);
+        }
+
+        // a linha está travada por esta transação (o UPDATE acima), então ninguém muda o last_seq entre os dois comandos.
+        final long lastSeq = this.databaseClient.queryOne(
+                "SELECT last_seq FROM ledger_snapshots WHERE account_id = :accountId",
+                Map.of("accountId", accountId),
+                rs -> rs.getLong(1)
+        ).orElseThrow();
+
+        return lastSeq - accountEntries.size() + 1;
     }
 
     private RowMap<LedgerReservation> mapReservation() {

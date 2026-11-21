@@ -1,0 +1,36 @@
+pg_stat_statements:
+  query: |
+    SELECT
+      queryid,
+      dbid,
+      userid,
+      calls,
+      total_exec_time,
+      mean_exec_time,
+      rows
+    FROM pg_stat_statements
+    WHERE queryid IS NOT NULL
+    ORDER BY total_exec_time DESC
+    LIMIT 50
+  metrics:
+    - queryid:
+        usage: "LABEL"
+        description: "Stable hash identifying the normalized query"
+    - dbid:
+        usage: "LABEL"
+        description: "Database OID"
+    - userid:
+        usage: "LABEL"
+        description: "User OID"
+    - calls:
+        usage: "COUNTER"
+        description: "Number of times the query was executed"
+    - total_exec_time:
+        usage: "COUNTER"
+        description: "Total time spent executing the query, in milliseconds"
+    - mean_exec_time:
+        usage: "GAUGE"
+        description: "Average execution time per call, in milliseconds"
+    - rows:
+        usage: "COUNTER"
+        description: "Total number of rows retrieved or affected"

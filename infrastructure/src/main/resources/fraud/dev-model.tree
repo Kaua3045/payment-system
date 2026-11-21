@@ -1,0 +1,48 @@
+# Modelo de EXEMPLO para desenvolvimento e testes.
+# Índices:
+# 0 log_amount
+# 1 amount_ratio_log
+# 2 count_1m_log
+# 3 count_1h_log
+# 4 count_24h_log
+# 5 distinct_payees_log
+# 6 new_payee
+# 7 night
+# 8 counterparty_new
+# 9 instrument_recent
+# 10 country_changed
+# 11 speed_scaled
+
+TREEMODEL 1
+FEATURES log_amount,amount_ratio_log,count_1m_log,count_1h_log,count_24h_log,distinct_payees_log,new_payee,night,counterparty_new,instrument_recent,country_changed,speed_scaled
+
+BASE -3.0
+TREES 4
+
+# Árvore 0: o destinatário é novo?
+TREE 3
+0 S 6 0.5 1 2
+1 L -0.3
+2 L 1.2
+
+# Árvore 1: o valor está muito acima do normal desta conta?
+TREE 3
+0 S 1 1.3 1 2
+1 L -0.1
+2 L 1.4
+
+# Árvore 2: instrumento recente ou velocidade suspeita?
+TREE 5
+0 S 9 0.5 1 2
+1 S 11 0.6 3 4
+2 L 1.0
+3 L 0.0
+4 L 1.5
+
+# Árvore 3: país diferente do habitual?
+TREE 3
+0 S 10 0.5 1 2
+1 L 0.0
+2 L 0.8
+
+END

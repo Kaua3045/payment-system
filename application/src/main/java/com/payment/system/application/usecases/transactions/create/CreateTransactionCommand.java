@@ -9,7 +9,8 @@ public record CreateTransactionCommand(
         String pixKey,
         String pixKeyType,
         Money amount,
-        String idempotencyKey
+        String idempotencyKey,
+        String ip
 ) {
 
     public static CreateTransactionCommand with(
@@ -17,14 +18,16 @@ public record CreateTransactionCommand(
             final String aPixKey,
             final String aPixKeyType,
             final BigDecimal aAmount,
-            final String aIdempotencyKey
+            final String aIdempotencyKey,
+            final String aIp
     ) {
         return new CreateTransactionCommand(
                 aFromAccountId,
                 aPixKey,
                 aPixKeyType,
                 Money.of(aAmount),
-                aIdempotencyKey
+                aIdempotencyKey,
+                aIp
         );
     }
 }

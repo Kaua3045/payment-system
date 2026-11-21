@@ -2,6 +2,9 @@ redis:
   host: ${redis.hosts:localhost}
   port: ${redis.ports:6390}
 
+fraud:
+  model-path: ./src/main/resources/fraud/dev-model.tree
+
 spring:
   datasource:
     driver-class-name: org.h2.Driver

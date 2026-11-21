@@ -18,6 +18,7 @@ import com.payment.system.infrastructure.transactions.res.CreateDepositResponse;
 import com.payment.system.infrastructure.transactions.res.CreateTransactionResponse;
 import com.payment.system.infrastructure.transactions.res.GetTransactionByIdResponse;
 import com.payment.system.infrastructure.transactions.res.ListTransactionsResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -52,15 +53,18 @@ public class TransactionRestController implements TransactionAPI {
 
     @IdempotencyKey
     @Override
-    public ResponseEntity<CreateTransactionResponse> createTransaction(final String idempotencyKey, final CreateTransactionRequest request) {
+    public ResponseEntity<CreateTransactionResponse> createTransaction(final String idempotencyKey, final CreateTransactionRequest request, final HttpServletRequest requestContext) {
         log.info("Received create transaction request: {}", request);
+
+        final var clientIp = requestContext.getRemoteAddr();
 
         final var aCommand = CreateTransactionCommand.with(
                 request.fromAccountId(),
                 request.pixKey(),
                 request.pixKeyType(),
                 request.amount(),
-                idempotencyKey
+                idempotencyKey,
+                clientIp
         );
 
         final var aOutput = this.createTransactionUseCase.execute(aCommand);
