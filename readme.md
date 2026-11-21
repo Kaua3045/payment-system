@@ -22,6 +22,8 @@ Um sistema estilo banco, para processamento de pagamentos, com criação de cont
 
 ## Tabela de conteúdos
 
+- [Decisões](/doc/decisions/readme.md)
+- [Fraud](/doc/fraud/readme.md)
 - [Arquitetura](#arquitetura)
 - [Requsitos para rodar o projeto](#requisitos)
 - [Performance](#performance)
