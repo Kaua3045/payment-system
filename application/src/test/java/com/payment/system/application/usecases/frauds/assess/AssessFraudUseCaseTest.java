@@ -30,7 +30,7 @@ class AssessFraudUseCaseTest extends UseCaseTest {
 
     @BeforeEach
     void setUp() {
-        FraudPipeline pipeline = new FraudPipeline(List.of());
+        FraudPipeline pipeline = new FraudPipeline(applicationLogger, List.of());
         useCase = new DefaultAssessFraudUseCase(
                 applicationLogger,
                 Map.of(Channel.PIX, pipeline),
@@ -64,7 +64,7 @@ class AssessFraudUseCaseTest extends UseCaseTest {
             }
         };
 
-        FraudPipeline pipeline = new FraudPipeline(List.of(denyStep));
+        FraudPipeline pipeline = new FraudPipeline(applicationLogger, List.of(denyStep));
 
         DefaultAssessFraudUseCase useCase =
                 new DefaultAssessFraudUseCase(
@@ -85,7 +85,7 @@ class AssessFraudUseCaseTest extends UseCaseTest {
     void givenAnInvalidNonSupportedChannel_whenCallPipeline_thenShouldReturnManualReview() {
         Attempt attempt = createValidAttempt();
 
-        FraudPipeline pipeline = new FraudPipeline(List.of());
+        FraudPipeline pipeline = new FraudPipeline(applicationLogger, List.of());
 
         DefaultAssessFraudUseCase useCase =
                 new DefaultAssessFraudUseCase(
@@ -129,7 +129,7 @@ class AssessFraudUseCaseTest extends UseCaseTest {
 
         Mockito.doThrow(new RuntimeException("failed record")).when(statsRepository).record(Mockito.any(), Mockito.any());
 
-        FraudPipeline pipeline = new FraudPipeline(List.of(approveStep));
+        FraudPipeline pipeline = new FraudPipeline(applicationLogger, List.of(approveStep));
 
         DefaultAssessFraudUseCase useCase =
                 new DefaultAssessFraudUseCase(
