@@ -95,7 +95,7 @@ public class AccountJdbcRepository implements AccountRepository {
                 """;
 
         executeUpdate(aSql, anAccount);
-        this.databaseClient.update("INSERT INTO ledger_snapshots (account_id, last_ledger_id, balance, updated_at) VALUES (:accountId, '0', :balance, :updatedAt)",
+        this.databaseClient.update("INSERT INTO ledger_snapshots (account_id, last_seq, balance, updated_at) VALUES (:accountId, 0, :balance, :updatedAt)",
                 Map.of(
                         "accountId", anAccount.getId().value().toString(),
                         "balance", anAccount.getBalance().amount(),
