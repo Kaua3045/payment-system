@@ -390,4 +390,9 @@ class LedgerJdbcRepositoryTest extends AbstractRepositoryTest {
                 exception.getMessage()
         );
     }
+
+    @Test
+    void givenAnEmptyEntries_whenCallSaveAll_thenShouldBeOk() {
+        Assertions.assertDoesNotThrow(() -> this.ledgerRepository().saveAll(List.of()));
+    }
 }
