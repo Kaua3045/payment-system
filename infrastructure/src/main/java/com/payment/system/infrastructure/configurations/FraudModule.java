@@ -55,7 +55,7 @@ public final class FraudModule {
     }
 
     private static FraudPipeline pipeline(TreeModel model, FraudSettings settings, StatsRepository stats, BlockList blockList) {
-        return new FraudPipeline(List.of(
+        return new FraudPipeline(new Slf4jApplicationLogger(FraudPipeline.class), List.of(
                 new EnrichStep(stats, new FeatureExtractor()),
                 new RulesStep(rules(settings, blockList)),
                 new ScoreStep(model, settings.getReviewAt(), settings.getDenyAt(), settings.getFailOpenBelow())
