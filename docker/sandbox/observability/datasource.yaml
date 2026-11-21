@@ -23,3 +23,17 @@ datasources:
         enabled: true
       search:
         hide: false
+
+  - name: PostgreSQL
+    type: postgres
+    uid: postgresql
+    access: proxy
+    url: payment-system-db:5432
+    user: postgres
+    secureJsonData:
+      password: postgres
+    jsonData:
+      database: payment-system
+      sslmode: 'disable'
+      postgresVersion: 1700
+    editable: false

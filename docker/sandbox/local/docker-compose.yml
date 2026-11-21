@@ -7,6 +7,10 @@ services:
       - "8081:8081"
     env_file:
       - ../../../.env
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: always
     environment:
       # OpenTelemetry auto-instrumentation
       OTEL_SERVICE_NAME: payment-system
@@ -37,13 +41,32 @@ services:
       POSTGRES_DB: payment-system
     ports:
       - "5432:5432"
-    command: >
-      postgres
-      -c shared_preload_libraries=pg_stat_statements
-      -c pg_stat_statements.track=all
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "payment-system"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d
+    networks:
+      - observability
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgresql:5432/payment-system?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/custom_queries.yml"
+    volumes:
+      - ../postgres-exporter/custom_queries.yml:/custom_queries.yml
+    ports:
+      - "9187:9187"
+    depends_on:
+      postgresql:
+        condition: service_healthy
     networks:
       - observability
 
