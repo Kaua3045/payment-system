@@ -1,5 +1,6 @@
 package com.payment.system.application.usecases.frauds.pipeline;
 
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.frauds.Attempt;
 import com.payment.system.domain.frauds.RequestContext;
@@ -27,8 +28,22 @@ class FraudPipelineTest extends UnitTest {
             fraudCase.decide(Verdict.APPROVE, 0.1);
         });
 
-        FraudCase result = new FraudPipeline(
-                List.of(first, second)
+        FraudCase result = new FraudPipeline(new ApplicationLogger() {
+            @Override
+            public void info(String message, Object... args) {
+
+            }
+
+            @Override
+            public void warn(String message, Object... args) {
+
+            }
+
+            @Override
+            public void error(String message, Object... args) {
+
+            }
+        }, List.of(first, second)
         ).run(attempt);
 
         assertEquals("first>second", result.path());
@@ -48,8 +63,22 @@ class FraudPipelineTest extends UnitTest {
                 thirdStepExecuted.set(true)
         );
 
-        FraudCase result = new FraudPipeline(
-                List.of(first, second)
+        FraudCase result = new FraudPipeline(new ApplicationLogger() {
+            @Override
+            public void info(String message, Object... args) {
+
+            }
+
+            @Override
+            public void warn(String message, Object... args) {
+
+            }
+
+            @Override
+            public void error(String message, Object... args) {
+
+            }
+        }, List.of(first, second)
         ).run(attempt);
 
         assertEquals(Verdict.DENY, result.getVerdict());
@@ -85,8 +114,22 @@ class FraudPipelineTest extends UnitTest {
             }
         };
 
-        FraudCase result = new FraudPipeline(
-                List.of(failingStep)
+        FraudCase result = new FraudPipeline(new ApplicationLogger() {
+            @Override
+            public void info(String message, Object... args) {
+
+            }
+
+            @Override
+            public void warn(String message, Object... args) {
+
+            }
+
+            @Override
+            public void error(String message, Object... args) {
+
+            }
+        }, List.of(failingStep)
         ).run(attempt);
 
         assertTrue(failureHandlerCalled.get());
@@ -129,8 +172,22 @@ class FraudPipelineTest extends UnitTest {
             fraudCase.decide(Verdict.APPROVE, 0.1);
         });
 
-        FraudCase result = new FraudPipeline(
-                List.of(failingStep, decisionStep)
+        FraudCase result = new FraudPipeline(new ApplicationLogger() {
+            @Override
+            public void info(String message, Object... args) {
+
+            }
+
+            @Override
+            public void warn(String message, Object... args) {
+
+            }
+
+            @Override
+            public void error(String message, Object... args) {
+
+            }
+        }, List.of(failingStep, decisionStep)
         ).run(attempt);
 
         assertTrue(nextStepExecuted.get());
@@ -146,7 +203,22 @@ class FraudPipelineTest extends UnitTest {
     void shouldReturnUndecidedCaseWhenThereAreNoSteps() {
         Attempt attempt = createValidAttempt();
 
-        FraudCase result = new FraudPipeline(List.of()).run(attempt);
+        FraudCase result = new FraudPipeline(new ApplicationLogger() {
+            @Override
+            public void info(String message, Object... args) {
+
+            }
+
+            @Override
+            public void warn(String message, Object... args) {
+
+            }
+
+            @Override
+            public void error(String message, Object... args) {
+
+            }
+        }, List.of()).run(attempt);
 
         assertNull(result.getVerdict());
         assertEquals("", result.path());

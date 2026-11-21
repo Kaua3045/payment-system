@@ -3,6 +3,7 @@ package com.payment.system.application.usecases.frauds.pipeline.steps;
 import com.payment.system.application.usecases.frauds.pipeline.FraudCase;
 import com.payment.system.application.usecases.frauds.pipeline.FraudPipeline;
 import com.payment.system.application.usecases.frauds.pipeline.FraudStep;
+import com.payment.system.application.wrapper.ApplicationLogger;
 import com.payment.system.domain.UnitTest;
 import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.frauds.Attempt;
@@ -73,7 +74,22 @@ class ScoreStepTest extends UnitTest {
             }
         };
 
-        new FraudPipeline(List.of(captureStep)).run(attempt);
+        new FraudPipeline(new ApplicationLogger() {
+            @Override
+            public void info(String message, Object... args) {
+
+            }
+
+            @Override
+            public void warn(String message, Object... args) {
+
+            }
+
+            @Override
+            public void error(String message, Object... args) {
+
+            }
+        }, List.of(captureStep)).run(attempt);
 
         return Objects.requireNonNull(captured.get());
     }
