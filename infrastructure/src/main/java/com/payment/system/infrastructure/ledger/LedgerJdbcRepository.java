@@ -34,6 +34,11 @@ import java.util.stream.Collectors;
 @Component
 public class LedgerJdbcRepository implements LedgerRepository {
 
+    private static final String INSERT_ENTRY_SQL = """
+        INSERT INTO ledger_entries (id, account_id, transaction_id, amount, type, created_at, account_seq)
+        VALUES (:id, :accountId, :transactionId, :amount, :type, :createdAt, :accountSeq)
+        """;
+
     private final DatabaseClient databaseClient;
 
     public LedgerJdbcRepository(final DatabaseClient databaseClient) {
@@ -42,26 +47,17 @@ public class LedgerJdbcRepository implements LedgerRepository {
 
     @Override
     public void save(final LedgerEntry entry) {
-        final var sql = """
-                INSERT INTO ledger_entries (id, account_id, transaction_id, amount, type, created_at)
-                VALUES (:id, :accountId, :transactionId, :amount, :type, :createdAt)
-                """;
-        this.databaseClient.update(sql, toParams(entry));
-        updateSnapshot(entry);
+        saveAll(List.of((entry)));
     }
 
     @Override
     public void saveAll(final List<LedgerEntry> entries) {
-        final var sql = """
-                INSERT INTO ledger_entries (id, account_id, transaction_id, amount, type, created_at)
-                VALUES (:id, :accountId, :transactionId, :amount, :type, :createdAt)
-                """;
-        final var batchParams = entries.stream()
-                .map(this::toParams)
-                .collect(Collectors.toList());
-        this.databaseClient.batchUpdate(sql, batchParams);
+        if (entries.isEmpty()) {
+            return;
+        }
 
-        // TreeMap: ordem determinística por id
+        // TreeMap: ordem determinística por id. As linhas já devem estar travadas por lockAccountsInOrder,
+        // mas este método não deve depender de quem o chamou.
         final var entriesByAccount = entries.stream()
                 .collect(Collectors.groupingBy(
                         entry -> entry.getAccountId().value().toString(),
@@ -69,9 +65,21 @@ public class LedgerJdbcRepository implements LedgerRepository {
                         Collectors.toList()
                 ));
 
-        for (final var accountEntries : entriesByAccount.values()) {
-            accountEntries.forEach(this::updateSnapshot);
+        final var rows = new ArrayList<Map<String, Object>>(entries.size());
+
+        for (final var group : entriesByAccount.entrySet()) {
+            final var accountEntries = group.getValue();
+            long seq = applyToSnapshot(group.getKey(), accountEntries); // número da PRIMEIRA entry desta conta
+
+            for (final var entry : accountEntries) {
+                final var params = toParams(entry);
+                params.put("accountSeq", seq++);
+                rows.add(params);
+            }
         }
+
+        // só aqui as entries entram, já numeradas (se algo lançou antes, nada foi gravado)
+        this.databaseClient.batchUpdate(INSERT_ENTRY_SQL, rows);
     }
 
     @Override
@@ -251,28 +259,31 @@ public class LedgerJdbcRepository implements LedgerRepository {
         }
     }
 
-    private void updateSnapshot(final LedgerEntry entry) {
-        final var sql = """
-                UPDATE ledger_snapshots
-                SET
-                    balance = balance + :amount,
-                    last_ledger_id = :ledgerId,
-                    updated_at = NOW()
-                WHERE account_id = :accountId
-                """;
+    private long applyToSnapshot(final String accountId, final List<LedgerEntry> accountEntries) {
+        final var delta = accountEntries.stream()
+                .map(entry -> entry.getAmount().amount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        final var updated = this.databaseClient.update(
-                sql,
-                Map.of(
-                        "accountId", entry.getAccountId().value().toString(),
-                        "amount", entry.getAmount().amount(),
-                        "ledgerId", entry.getId().value().toString()
-                )
-        );
+        final var updated = this.databaseClient.update("""
+            UPDATE ledger_snapshots
+            SET balance = balance + :delta,
+                last_seq = last_seq + :count,
+                updated_at = NOW()
+            WHERE account_id = :accountId
+            """, Map.of("delta", delta, "count", accountEntries.size(), "accountId", accountId));
 
         if (updated != 1) {
-            throw new SnapshotNotExistsException(entry.getAccountId().value().toString());
+            throw new SnapshotNotExistsException(accountId);
         }
+
+        // a linha está travada por esta transação (o UPDATE acima), então ninguém muda o last_seq entre os dois comandos.
+        final long lastSeq = this.databaseClient.queryOne(
+                "SELECT last_seq FROM ledger_snapshots WHERE account_id = :accountId",
+                Map.of("accountId", accountId),
+                rs -> rs.getLong(1)
+        ).orElseThrow();
+
+        return lastSeq - accountEntries.size() + 1;
     }
 
     private RowMap<LedgerReservation> mapReservation() {
