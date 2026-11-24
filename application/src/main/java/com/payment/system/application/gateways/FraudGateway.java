@@ -1,9 +1,29 @@
 package com.payment.system.application.gateways;
 
-import com.payment.system.domain.frauds.Assessment;
-import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.*;
+import com.payment.system.domain.valueobjects.Money;
+
+import java.time.Instant;
+import java.util.List;
 
 public interface FraudGateway {
 
-    Assessment assess(Attempt attempt);
+    AssessmentResponse assess(AttemptRequest attempt);
+
+    record AttemptRequest(
+            String idempotencyKey, // Idempotency key used in request attempts
+            String origin,
+            String destination,
+            Money amount,
+            Instant destinationCreatedAt,
+            ChannelDetails details,
+            RequestContext context
+    ) {}
+
+    record AssessmentResponse(
+            Verdict verdict,
+            double score,
+            List<String> reasons,
+            boolean degraded
+    ) {}
 }
