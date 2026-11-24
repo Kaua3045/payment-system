@@ -9,7 +9,7 @@ para estado, aprendizado e auditoria). O pagamento não pode cair por causa dele
 
 ## Decisão
 - O módulo de pagamentos conhece **uma interface**: `FraudGateway.assess(Attempt) → Assessment`. Hoje a implementação é chamar direto o usecase `AssessFraudUsecase`,
-    no futuro a ideia é receber um `AttemptRequest` e chamar um serviço HTTP remoto que vai retornar `AssessmentResult`. Hoje está assim porque esta tudo dentro do mesmo processo, mas a interface é a mesma.
+    com `AttemptRequest` e no momento chama o usecase diretamente, mas no futuro a ideia é chamar um serviço HTTP remoto que vai retornar `AssessmentResult`. Hoje está assim porque esta tudo dentro do mesmo processo, mas a interface é a mesma.
 - `Assessment` traz `verdict`, `score`, `reasons` e `degraded`.
 - O `FraudGatewayImpl`: em **qualquer** `RuntimeException`, valor ≤ `failOpenBelow` (padrão R$ 200,00)
   **aprova**, o resto vai para `REVIEW`, sempre com `degraded = true` (para reprocessar depois).

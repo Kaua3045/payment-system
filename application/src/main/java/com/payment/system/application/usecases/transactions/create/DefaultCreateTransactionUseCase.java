@@ -17,6 +17,7 @@ import com.payment.system.domain.exceptions.FraudDenyException;
 import com.payment.system.domain.exceptions.InternalErrorException;
 import com.payment.system.domain.exceptions.NoStackTraceException;
 import com.payment.system.domain.frauds.Attempt;
+import com.payment.system.domain.frauds.ChannelDetails;
 import com.payment.system.domain.frauds.RequestContext;
 import com.payment.system.domain.frauds.Verdict;
 import com.payment.system.domain.ledger.LedgerEntry;
@@ -107,15 +108,25 @@ public class DefaultCreateTransactionUseCase extends CreateTransactionUseCase {
                 // TODO: [FRAUDE] Verificação síncrona de risco antes da reserva
                 // TODO adicionar a location, ja recebo o ip no input, so falta chamar um gateway pra pegar a location, e ai passar para o assess
                 // ou enviar o ip pro assess e ele chama o gateway (acho melhor)
-                final var fraudResult = this.fraudGateway.assess(Attempt.pix(
+//                final var fraudResult = this.fraudGateway.assess(Attempt.pix(
+//                        input.idempotencyKey(),
+//                        aFromAccount.accountId().value().toString(),
+//                        aToAccount.accountId().value().toString(),
+//                        input.pixKey(),
+//                        aPixKeyResponse.pixKeyCreatedAt(),
+//                        input.amount(),
+//                        InstantUtils.now(),
+//                        aToAccount.createdAt(),
+//                        new RequestContext(input.ip())
+//                ));
+                // TODO posso trazer o pixkey do aPixKeyResponse, no formato esperado
+                final var fraudResult = this.fraudGateway.assess(new FraudGateway.AttemptRequest(
                         input.idempotencyKey(),
                         aFromAccount.accountId().value().toString(),
                         aToAccount.accountId().value().toString(),
-                        input.pixKey(),
-                        aPixKeyResponse.pixKeyCreatedAt(),
                         input.amount(),
-                        InstantUtils.now(),
                         aToAccount.createdAt(),
+                        new ChannelDetails.Pix(input.pixKey(), aPixKeyResponse.pixKeyCreatedAt()),
                         new RequestContext(input.ip())
                 ));
 

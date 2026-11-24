@@ -101,7 +101,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, toAccount.getId(), accountCreatedAt));
 
         Mockito.when(fraudGateway.assess(Mockito.any()))
-                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
+                .thenReturn(new FraudGateway.AssessmentResponse(Verdict.APPROVE, 0.15, List.of(), false));
 
         Mockito.when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(returnsFirstArg());
@@ -286,7 +286,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
 
         Mockito.when(fraudGateway.assess(Mockito.any()))
-                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
+                .thenReturn(new FraudGateway.AssessmentResponse(Verdict.APPROVE, 0.15, List.of(), false));
 
         Mockito.doThrow(new InsufficientFundsException())
                 .when(ledgerRepository).createReservation(any());
@@ -345,7 +345,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
 
         Mockito.when(fraudGateway.assess(Mockito.any()))
-                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
+                .thenReturn(new FraudGateway.AssessmentResponse(Verdict.APPROVE, 0.15, List.of(), false));
 
         Mockito.doThrow(InternalErrorException.with("Database connection error"))
                 .when(ledgerRepository).createReservation(any());
@@ -385,7 +385,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
 
         Mockito.when(fraudGateway.assess(Mockito.any()))
-                .thenReturn(new Assessment(Verdict.APPROVE, 0.15, List.of()));
+                .thenReturn(new FraudGateway.AssessmentResponse(Verdict.APPROVE, 0.15, List.of(), false));
 
         Mockito.doThrow(new RuntimeException("Unexpected error"))
                 .when(ledgerRepository).createReservation(any());
@@ -424,7 +424,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
 
         Mockito.when(fraudGateway.assess(Mockito.any()))
-                .thenReturn(new Assessment(Verdict.DENY, 0.90, List.of("AMOUNT_LIMIT")));
+                .thenReturn(new FraudGateway.AssessmentResponse(Verdict.DENY, 0.90, List.of("AMOUNT_LIMIT"), false));
 
         final var command = CreateTransactionCommand.with(
                 from.value().toString(),
@@ -460,7 +460,7 @@ class CreateTransactionUseCaseTest extends UseCaseTest {
                 .thenReturn(new AccountGateway.AccountResponse(AccountStatus.ACTIVE, to, accountCreatedAt));
 
         Mockito.when(fraudGateway.assess(Mockito.any()))
-                .thenReturn(new Assessment(Verdict.MANUAL_REVIEW, 0.75, List.of("NEW_PAYEER")));
+                .thenReturn(new FraudGateway.AssessmentResponse(Verdict.MANUAL_REVIEW, 0.75, List.of("NEW_PAYEER"), false));
 
         final var command = CreateTransactionCommand.with(
                 from.value().toString(),
