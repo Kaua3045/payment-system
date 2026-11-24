@@ -79,3 +79,4 @@ p99 de latência acima de 40 ms; salto na taxa de DENY ou REVIEW; blocklist vazi
 - [X] Implementar o jdbc da blocklist e a recarga a quente.
 - [ ] Implementar a inserção de keys na blocklist
 - [X] Mudar a interface `FraudGatewayImpl` para receber um record `AttemptRequest` e devolver um `AssessmentResult`
+- [ ] Implementar o step de geo location na pipeline
