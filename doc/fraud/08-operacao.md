@@ -76,5 +76,6 @@ p99 de latência acima de 40 ms; salto na taxa de DENY ou REVIEW; blocklist vazi
 - [ ] Níveis de log em `INFO` (aprovações em `DEBUG` desligadas) e métricas ligadas.
 - [ ] Teste de carga repetido com o Redis real e com o nível de log de produção.
 - [ ] Decidir se o REVIEW será integrado (06) ou tratado como DENY enquanto isso.
-- [ ] Implementar o arquivo da blocklist (ou um serviço de blocklist) e a recarga a quente.
+- [X] Implementar o jdbc da blocklist e a recarga a quente.
+- [ ] Implementar a inserção de keys na blocklist
 - [X] Mudar a interface `FraudGatewayImpl` para receber um record `AttemptRequest` e devolver um `AssessmentResult`
