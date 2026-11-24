@@ -5,6 +5,7 @@ import com.payment.system.application.repositories.LedgerRepository;
 import com.payment.system.application.repositories.PixKeyRepository;
 import com.payment.system.application.repositories.TransactionRepository;
 import com.payment.system.infrastructure.accounts.AccountJdbcRepository;
+import com.payment.system.infrastructure.frauds.blocklist.JdbcBlockListSource;
 import com.payment.system.infrastructure.jdbc.JdbcClientAdapter;
 import com.payment.system.infrastructure.ledger.LedgerJdbcRepository;
 import com.payment.system.infrastructure.pixkeys.PixKeyJdbcRepository;
@@ -41,12 +42,16 @@ public class AbstractRepositoryTest {
     private TransactionRepository transactionRepository;
     private LedgerRepository ledgerRepository;
 
+    private JdbcBlockListSource jdbcBlockListSource;
+
     @BeforeEach
     void setUp() {
         this.accountRepository = new AccountJdbcRepository(new JdbcClientAdapter(jdbcClient, operations));
         this.pixKeyRepository = new PixKeyJdbcRepository(new JdbcClientAdapter(jdbcClient, operations));
         this.transactionRepository = new TransactionJdbcRepository(new JdbcClientAdapter(jdbcClient, operations));
         this.ledgerRepository = new LedgerJdbcRepository(new JdbcClientAdapter(jdbcClient, operations));
+
+        this.jdbcBlockListSource = new JdbcBlockListSource(new JdbcClientAdapter(jdbcClient, operations));
     }
 
     protected int countAccounts() {
@@ -87,5 +92,9 @@ public class AbstractRepositoryTest {
 
     protected LedgerRepository ledgerRepository() {
         return ledgerRepository;
+    }
+
+    public JdbcBlockListSource jdbcBlockListSource() {
+        return jdbcBlockListSource;
     }
 }
