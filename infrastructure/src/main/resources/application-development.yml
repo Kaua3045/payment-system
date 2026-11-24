@@ -6,7 +6,9 @@ application:
   instance: payment-system-01
 
 fraud:
-  model-path: ./src/main/resources/fraud/dev-model.tree
+  model-path: fraud/dev-model.tree
+  block-list-type: jdbc
+  block-list-refresh-interval-seconds: 60
 
 redis:
   host: localhost

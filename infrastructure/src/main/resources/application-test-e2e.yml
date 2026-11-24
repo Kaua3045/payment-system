@@ -3,7 +3,8 @@ redis:
   port: ${redis.ports:6390}
 
 fraud:
-  model-path: ./src/main/resources/fraud/dev-model.tree
+  model-path: fraud/dev-model.tree
+  block-list-type: in_memory
 
 postgres:
   url: localhost:${postgres.port}

@@ -5,6 +5,11 @@ application:
   environment: ${DEPLOYMENT_ENVIRONMENT_NAME:dev}
   instance: payment-system-01
 
+fraud:
+  model-path: fraud/dev-model.tree
+  block-list-refresh-interval-seconds: 60
+  block-list-type: jdbc
+
 idempotency-key:
   storage:
     type: redis
