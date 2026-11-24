@@ -2,6 +2,7 @@
 
 - **Status:** Aceita
 - **Data:** 2026-11-21
+- **Status:** Substituída por 0012
 
 ## Contexto
 Bloquear uma conta, chave Pix, cartão ou aparelho deve ser possível sem deploy, e a consulta roda no caminho crítico.
