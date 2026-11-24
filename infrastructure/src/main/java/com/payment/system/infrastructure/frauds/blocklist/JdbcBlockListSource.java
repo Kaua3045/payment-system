@@ -15,10 +15,10 @@ public class JdbcBlockListSource implements BlockListSource {
     @Override
     public Set<String> load() {
         return Set.copyOf(this.databaseClient.query("""
-                SELECT blocked_value
+                SELECT blocked_type, blocked_value
                 FROM fraud_blocklist
                 WHERE expires_at is NULL
                     OR expires_at > CURRENT_TIMESTAMP
-                """, (rs) -> rs.getString("blocked_value")));
+                """, (rs) -> rs.getString("blocked_type") + ":" + rs.getString("blocked_value")));
     }
 }
