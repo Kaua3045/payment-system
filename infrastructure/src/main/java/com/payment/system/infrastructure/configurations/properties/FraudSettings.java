@@ -1,5 +1,6 @@
 package com.payment.system.infrastructure.configurations.properties;
 
+import com.payment.system.infrastructure.frauds.blocklist.BlockListType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -11,7 +12,7 @@ public class FraudSettings implements InitializingBean {
 
     private static final Logger log = LoggerFactory.getLogger(FraudSettings.class);
 
-    private Path modelPath;
+    private String modelPath;
     private double reviewAt;
     private double denyAt;
     private BigDecimal amountLimit;
@@ -21,17 +22,19 @@ public class FraudSettings implements InitializingBean {
     private double maxSpeedKmh;
     private double travelBoost;
     private BigDecimal failOpenBelow;
+    private BlockListType blockListType;
+    private int blockListRefreshIntervalSeconds;
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         log.info("Initialized FraudSettings {}", this);
     }
 
-    public Path getModelPath() {
+    public String getModelPath() {
         return modelPath;
     }
 
-    public void setModelPath(Path modelPath) {
+    public void setModelPath(String modelPath) {
         this.modelPath = modelPath;
     }
 
@@ -107,6 +110,22 @@ public class FraudSettings implements InitializingBean {
         this.failOpenBelow = failOpenBelow;
     }
 
+    public BlockListType getBlockListType() {
+        return blockListType;
+    }
+
+    public void setBlockListType(BlockListType blockListType) {
+        this.blockListType = blockListType;
+    }
+
+    public int getBlockListRefreshIntervalSeconds() {
+        return blockListRefreshIntervalSeconds;
+    }
+
+    public void setBlockListRefreshIntervalSeconds(int blockListRefreshIntervalSeconds) {
+        this.blockListRefreshIntervalSeconds = blockListRefreshIntervalSeconds;
+    }
+
     @Override
     public String toString() {
         return "FraudSettings{" +
@@ -120,6 +139,8 @@ public class FraudSettings implements InitializingBean {
                 ", maxSpeedKmh=" + maxSpeedKmh +
                 ", travelBoost=" + travelBoost +
                 ", failOpenBelow=" + failOpenBelow +
+                ", blockListType=" + blockListType +
+                ", blockListRefreshIntervalSeconds=" + blockListRefreshIntervalSeconds +
                 '}';
     }
 }

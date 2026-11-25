@@ -19,14 +19,19 @@ import com.payment.system.domain.frauds.rules.Rules;
 import com.payment.system.domain.valueobjects.Money;
 import com.payment.system.infrastructure.configurations.properties.FraudSettings;
 import com.payment.system.infrastructure.wrapper.Slf4jApplicationLogger;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public final class FraudModule {
+public final class FraudModule implements AutoCloseable {
 
     private final AssessFraudUseCase useCase;
     private final BlockList blockList;
@@ -43,13 +48,16 @@ public final class FraudModule {
             final Metrics metrics,
             final TracerWrapper tracer
     ) throws IOException {
-        try {
-            final var pixPipeline = pipeline(TreeModelParser.parse(settings.getModelPath()), settings, stats, blockList);
+        Resource resource = new ClassPathResource(settings.getModelPath());
+
+        try (Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+            final var pixPipeline = pipeline(TreeModelParser.parse(reader), settings, stats, blockList);
             Map<Channel, FraudPipeline> pipelines = Map.of(Channel.PIX, pixPipeline);
             return new FraudModule(new DefaultAssessFraudUseCase(
                     new Slf4jApplicationLogger(AssessFraudUseCase.class), pipelines, stats, metrics, tracer
             ), blockList);
         } catch (Exception ex) {
+            closeQuietly(blockList);
             throw ex;
         }
     }
@@ -76,5 +84,19 @@ public final class FraudModule {
 
     public AssessFraudUseCase getUseCase() {
         return useCase;
+    }
+
+    @Override
+    public void close() throws Exception {
+        closeQuietly(blockList);
+    }
+
+    private static void closeQuietly(final BlockList list) {
+        if (list instanceof AutoCloseable c) {
+            try {
+                c.close();
+            } catch (Exception ignored) {
+            }
+        }
     }
 }
